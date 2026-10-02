@@ -16,6 +16,7 @@
 import argparse
 import hashlib
 import pathlib
+import shlex
 import subprocess
 import tarfile
 import tempfile
@@ -26,6 +27,37 @@ EXPECTED = {
     "linux_amd64", "linux_arm64", "linux_armv7",
     "darwin_amd64", "darwin_arm64", "windows_amd64",
 }
+
+
+def linker_values(metadata):
+    flags = [token.removeprefix("-ldflags=") for token in shlex.split(metadata)
+             if token.startswith("-ldflags=")]
+    if len(flags) != 1:
+        raise ValueError("Missing or duplicate linker flags in Go build metadata")
+    arguments = shlex.split(flags[0])
+    assignments = []
+    for index, argument in enumerate(arguments):
+        if argument == "-X":
+            if index + 1 == len(arguments):
+                raise ValueError("Missing linker assignment")
+            assignments.append(arguments[index + 1])
+        elif argument.startswith("-X="):
+            assignments.append(argument.removeprefix("-X="))
+    values = {"Version": [], "GitCommit": []}
+    for assignment in assignments:
+        name, separator, value = assignment.partition("=")
+        if not separator:
+            raise ValueError("Invalid linker assignment")
+        for field in values:
+            if name.endswith(f"/internal/version.{field}"):
+                values[field].append(value)
+    return values
+
+
+def native_values(output, label):
+    prefix = f"{label}:"
+    return [line.removeprefix(prefix).strip() for line in output.splitlines()
+            if line.startswith(prefix)]
 
 
 def verify(directory, expected_version=None, expected_commit=None, smoke_platform=None):
@@ -82,19 +114,21 @@ def verify(directory, expected_version=None, expected_commit=None, smoke_platfor
                 ["go", "version", "-m", str(path)], text=True
             )
             print(metadata)
-            if expected_version and f"/internal/version.Version={expected_version.removeprefix('v')}" not in metadata:
-                raise ValueError(f"Version metadata mismatch: {archive.name}")
-            if expected_commit and f"/internal/version.GitCommit={expected_commit}" not in metadata:
-                raise ValueError(f"Commit metadata mismatch: {archive.name}")
+            if expected_version or expected_commit:
+                values = linker_values(metadata)
+                if expected_version and values["Version"] != [expected_version.removeprefix("v")]:
+                    raise ValueError(f"Version metadata mismatch: {archive.name}")
+                if expected_commit and values["GitCommit"] != [expected_commit]:
+                    raise ValueError(f"Commit metadata mismatch: {archive.name}")
             result = subprocess.run(["govulncheck", "-mode=binary", str(path)])
             failed = failed or result.returncode != 0
             if platform == smoke_platform:
                 path.chmod(0o755)
                 output = subprocess.check_output([str(path), "version"], text=True)
                 print(output)
-                if expected_version and expected_version.removeprefix("v") not in output:
+                if expected_version and native_values(output, "Version") != [expected_version.removeprefix("v")]:
                     raise ValueError("Native CLI version mismatch")
-                if expected_commit and expected_commit not in output:
+                if expected_commit and native_values(output, "Git commit") != [expected_commit]:
                     raise ValueError("Native CLI commit mismatch")
     if platforms != expected:
         raise ValueError("Missing platform archives")

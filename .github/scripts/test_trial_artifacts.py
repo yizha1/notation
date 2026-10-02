@@ -45,8 +45,9 @@ class TrialArtifactTests(unittest.TestCase):
         self.checksums = self.directory / "notation_checksums.txt"
         self.checksums.write_text("\n".join(entries))
         self.metadata = (
-            "/internal/version.Version=1.3.3-trial.1 "
-            "/internal/version.GitCommit=abc123"
+            '\tbuild\t-ldflags="-s -w '
+            '-X github.com/notaryproject/notation/internal/version.Version=1.3.3-trial.1 '
+            '-X github.com/notaryproject/notation/internal/version.GitCommit=abc123"\n'
         )
 
     @patch("check_trial_artifacts.subprocess.run")
@@ -94,6 +95,51 @@ class TrialArtifactTests(unittest.TestCase):
 
     @patch("check_trial_artifacts.subprocess.run")
     @patch("check_trial_artifacts.subprocess.check_output")
+    def test_metadata_prefixes_do_not_match(self, metadata, scanner):
+        scanner.return_value = subprocess.CompletedProcess([], 0)
+        for output, error in (
+            (self.metadata.replace("1.3.3-trial.1", "1.3.3-trial.10"),
+             "Version metadata mismatch"),
+            (self.metadata.replace("abc123", "abc123def456"),
+             "Commit metadata mismatch"),
+        ):
+            with self.subTest(error=error):
+                metadata.return_value = output
+                with self.assertRaisesRegex(ValueError, error):
+                    verify(self.directory, "v1.3.3-trial.1", "abc123")
+
+    @patch("check_trial_artifacts.subprocess.run")
+    @patch("check_trial_artifacts.subprocess.check_output")
+    def test_equal_sign_linker_assignments_are_supported(self, metadata, scanner):
+        metadata.return_value = self.metadata.replace("-X ", "-X=")
+        scanner.return_value = subprocess.CompletedProcess([], 0)
+        verify(self.directory, "v1.3.3-trial.1", "abc123")
+        self.assertEqual(scanner.call_count, 6)
+
+    @patch("check_trial_artifacts.subprocess.run")
+    @patch("check_trial_artifacts.subprocess.check_output")
+    def test_duplicate_linker_assignments_fail(self, metadata, scanner):
+        metadata.return_value = self.metadata.replace(
+            "-s -w", "-s -w -X "
+            "github.com/notaryproject/notation/internal/version.Version=1.3.3-trial.10"
+        )
+        scanner.return_value = subprocess.CompletedProcess([], 0)
+        with self.assertRaisesRegex(ValueError, "Version metadata mismatch"):
+            verify(self.directory, "v1.3.3-trial.1", "abc123")
+
+    @patch("check_trial_artifacts.subprocess.run")
+    @patch("check_trial_artifacts.subprocess.check_output")
+    def test_metadata_without_linker_flags_fails(self, metadata, scanner):
+        metadata.return_value = (
+            "/internal/version.Version=1.3.3-trial.1 "
+            "/internal/version.GitCommit=abc123"
+        )
+        scanner.return_value = subprocess.CompletedProcess([], 0)
+        with self.assertRaisesRegex(ValueError, "linker flags"):
+            verify(self.directory, "v1.3.3-trial.1", "abc123")
+
+    @patch("check_trial_artifacts.subprocess.run")
+    @patch("check_trial_artifacts.subprocess.check_output")
     def test_native_smoke_checks_real_command_output(self, metadata, scanner):
         for path in self.directory.glob("notation_1.*"):
             if not path.name.endswith("_linux_amd64.tar.gz"):
@@ -104,6 +150,27 @@ class TrialArtifactTests(unittest.TestCase):
         ]
         verify(self.directory, "v1.3.3-trial.1", "abc123", "linux_amd64")
         self.assertEqual(metadata.call_args_list[1].args[0][-1], "version")
+
+    @patch("check_trial_artifacts.subprocess.run")
+    @patch("check_trial_artifacts.subprocess.check_output")
+    def test_native_smoke_requires_exact_labeled_values(self, metadata, scanner):
+        for path in self.directory.glob("notation_1.*"):
+            if not path.name.endswith("_linux_amd64.tar.gz"):
+                path.unlink()
+        scanner.return_value = subprocess.CompletedProcess([], 0)
+        for output, error in (
+            ("Version: 1.3.3-trial.10\nGit commit: abc123\n",
+             "Native CLI version mismatch"),
+            ("Version: 1.3.3-trial.1\nGit commit: abc123def456\n",
+             "Native CLI commit mismatch"),
+            ("Other: 1.3.3-trial.1 abc123\n", "Native CLI version mismatch"),
+            ("Version: 1.3.3-trial.1\nVersion: other\nGit commit: abc123\n",
+             "Native CLI version mismatch"),
+        ):
+            with self.subTest(output=output):
+                metadata.side_effect = [self.metadata, output]
+                with self.assertRaisesRegex(ValueError, error):
+                    verify(self.directory, "v1.3.3-trial.1", "abc123", "linux_amd64")
 
 
 if __name__ == "__main__":
