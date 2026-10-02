@@ -22,3 +22,5 @@ test/e2e/coverage.txt
 **/covcounters.*
 **/covmeta.*
 dist/
+.trial/
+__pycache__/

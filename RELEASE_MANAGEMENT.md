@@ -51,6 +51,84 @@ The Notation project has reached a stable target version of 1.0.0 and all previo
   - Applicable fixes, including security fixes, may be cherry-picked from master into the latest supported minor release-X.Y branches.
   - Patch release, cut from a release-X.Y branch
 
+### Proposed Monthly Patch Cadence
+
+The latest stable CLI line has a monthly preparation cycle focused on dependency
+updates and CVE remediation. Publish a patch only when approved changes are ready;
+record an empty cycle as skipped. Urgent security fixes may be released outside
+the monthly cycle. This cadence does not change the supported releases policy.
+The previous supported line receives patches on demand for customer needs and
+applicable security fixes, rather than an automatic monthly dependency refresh.
+
+Each cycle has a tracking issue, a release owner, and a backup. A scheduled
+workflow opens the issue on the first day of the month at 09:00 UTC; manual
+dispatch provides recovery if scheduled execution is delayed or disabled.
+The owner confirms the stable release line, selects patch-safe changes, records
+dependency and CVE dispositions, and follows [the release checklist](RELEASE_CHECKLIST.md).
+Publication depends on qualification and maintainer approval, not the calendar.
+
+Include compatible direct and transitive dependency updates, patched Go compiler
+and standard-library versions, and relevant build-tool updates. Exclude new
+features, unrelated refactoring, and breaking behavior. Review upstream release
+notes and any increased minimum Go or operating-system requirements. Changes on
+`main` do not automatically update a stable branch, particularly when `main`
+develops a different major version.
+
+For each vulnerability, record the advisory, affected versions and supported
+lines, production versus test/build exposure, reachability, fixed version, owner,
+and remediation or explicit exception rationale. Untriaged findings and scanner
+execution errors block qualification. Known exploitation or serious reachable
+impact requires immediate triage and an out-of-cycle release decision. Keep
+embargoed findings in the project's private security process, not public issues.
+
+When library patches are needed, qualify and release `notation-core-go` first,
+then `notation-go`, then the CLI consuming those versions. Each project retains
+its own release approval requirements. Do not assume independent library and CLI
+version numbers must match.
+
+#### Fork-First Trial
+
+This process is initially a trial in `yizha1/notation`, with dependency trials in
+`yizha1/notation-core-go` and `yizha1/notation-go`. It is not active upstream.
+The scheduler requires the exact fork identity and the repository variable
+`PATCH_TRIAL_ENABLED=true`. Official upstream release metadata is read-only;
+all issues, preparation PRs, tags, and draft releases target the forks explicitly.
+No upstream support-policy change, announcement, or website update is included.
+
+The selected trial dependency updates require Go 1.26 or later. Review that
+minimum-toolchain increase explicitly before any upstream adoption.
+
+Use stable release branches or the libraries' official stable tags as candidate
+bases. Inventory open Dependabot PRs in all three projects and record updates as
+applied, superseded, or deferred with rationale. Do not merge or close upstream
+PRs as part of the trial.
+
+Create uniquely numbered, signed trial prerelease tags, for example
+`v1.3.3-trial.1`, only after candidate qualification and the user's recorded
+approval. Trial approval does not represent an upstream maintainer vote.
+Qualify and create the core library draft, then the Go library draft, then the
+CLI draft. Every release remains unpublished and clearly marked as a trial.
+Tags themselves are public and can resolve as Go module versions even when
+GitHub Release objects remain drafts.
+
+Fork library tags do not redirect an upstream Go module requirement. Use explicit
+temporary fork replacements in every affected module and record the actual tested
+commits. Remove those overrides in favor of approved official library versions
+before any separately authorized upstream adoption.
+
+Inspect inherited workflows before activation and prevent external project,
+coverage, and notification integrations from running in the trial. Do not copy
+upstream secrets or force-update existing fork branches. Verify workflow
+permissions, fork authentication, candidate refs, and outgoing scope before each
+authorized remote change. Keep scheduling on the fork's default branch and the
+qualification/release workflows on the tagged candidate branch.
+
+Successful trial evidence includes an idempotent monthly issue, passing candidate
+checks, three signed trial tags in dependency order, unpublished drafts, and
+inspected CLI assets, checksums, and version/commit metadata. Record blocked or
+skipped outcomes honestly. Upstream adoption and publication require a separate
+decision after reviewing that evidence.
+
 ## Supported Releases
 
 We expect to "support" n (current) and n-1 major.minor releases. "Support" means we expect users to be running that version in production. For example, when v1.3.0 comes out, v1.1.x will no longer be supported for patches, and we encourage users to upgrade to a supported version as soon as possible. Support will be provided best effort by the maintainers via GitHub issues and pull requests.

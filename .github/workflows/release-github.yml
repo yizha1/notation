@@ -23,17 +23,18 @@ permissions:
 
 jobs:
   build:
+    if: github.repository == 'notaryproject/notation'
     permissions:
       contents: write  # for goreleaser/goreleaser-action to create a GitHub release
     name: Release Notation Binaries
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        go-version: ['1.23']
+        go-version: ['1.26']
       fail-fast: true
     steps:
       - name: Set up Go ${{ matrix.go-version }}
-        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version: ${{ matrix.go-version }}
           check-latest: true

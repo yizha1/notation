@@ -1,0 +1,116 @@
+# Copyright The Notary Project Authors.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Fork-only draft release
+
+on:
+  push:
+    tags:
+      - 'v*-trial.*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trial-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  qualification:
+    if: github.repository == 'yizha1/notation' && vars.PATCH_TRIAL_ENABLED == 'true'
+    uses: ./.github/workflows/patch-qualification.yml
+  draft:
+    needs: qualification
+    if: github.repository == 'yizha1/notation' && vars.PATCH_TRIAL_ENABLED == 'true' && needs.qualification.result == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: stable
+          check-latest: true
+      - name: Validate trial tag and prepare release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          base="${GITHUB_REF_NAME%-trial.*}"
+          line="${base%.*}"
+          git fetch --no-tags https://github.com/notaryproject/notation.git \
+            "refs/tags/$line.*:refs/tags/$line.*"
+          previous=$(python3 .github/scripts/monthly_patch.py previous-tag "$GITHUB_REF_NAME")
+          echo "GORELEASER_PREVIOUS_TAG=$previous" >> "$GITHUB_ENV"
+          git cat-file -t "$GITHUB_REF_NAME" | grep -x tag
+          tag_object=$(git rev-parse "$GITHUB_REF_NAME")
+          gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_object" --jq '.verification.verified' | grep -x true
+          {
+            echo 'Trial only; not an official Notary Project release.'
+            echo
+            go version
+            echo
+            echo "Candidate commit: $GITHUB_SHA"
+            echo "Previous stable tag: $previous"
+            echo
+            git log --format='* %s (%h)' "$previous..$GITHUB_SHA"
+          } > trial-notes.txt
+      - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
+        with:
+          distribution: goreleaser
+          version: v2.18.2
+          args: release --clean --release-notes=trial-notes.txt
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Check draft state and scan every built binary
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --json isDraft,isPrerelease --jq '.isDraft and .isPrerelease' | grep -x true
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          python3 .github/scripts/check_trial_artifacts.py dist \
+            --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA"
+  smoke:
+    needs: draft
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux_amd64
+          - os: macos-14
+            platform: darwin_arm64
+          - os: windows-latest
+            platform: windows_amd64
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: stable
+          check-latest: true
+      - name: Download and smoke-test unpublished native assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            --dir downloaded --pattern "*_${PLATFORM}.*" --pattern '*checksums.txt'
+          python3 .github/scripts/check_trial_artifacts.py downloaded \
+            --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" --smoke-platform "$PLATFORM"
