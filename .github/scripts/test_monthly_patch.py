@@ -12,9 +12,11 @@
 # limitations under the License.
 
 import unittest
+from unittest.mock import patch
 
 from monthly_patch import (
     DEPENDENCY_REPOSITORIES,
+    GitHub,
     SOURCE_REPOSITORY,
     TRIAL_REPOSITORY,
     initiate,
@@ -68,6 +70,17 @@ class FakeGitHub:
 
 
 class MonthlyPatchTests(unittest.TestCase):
+    @patch("monthly_patch.subprocess.check_output")
+    def test_platform_operations_use_cli_without_token_arguments(self, command):
+        command.return_value = '{"ok": true}'
+        api = GitHub("test-only-token")
+        self.assertEqual(api.request("repos/yizha1/notation"), {"ok": True})
+        self.assertEqual(command.call_args.args[0][-2:], ["--method", "GET"])
+        api.request("repos/yizha1/notation/issues", {"title": "Trial"})
+        self.assertEqual(command.call_args.args[0][-2:], ["--input", "-"])
+        self.assertEqual(command.call_args.kwargs["input"], '{"title": "Trial"}')
+        self.assertNotIn("test-only-token", command.call_args.args[0])
+
     def test_release_selection_is_semver_not_date_or_latest_flag(self):
         releases = [
             {"tag_name": tag, "draft": draft, "prerelease": pre}

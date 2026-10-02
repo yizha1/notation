@@ -63,7 +63,7 @@ jobs:
           make test
           make e2e
       - name: Install pinned vulnerability scanner
-        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
       - name: Scan production and test module graphs
         run: |
           mkdir -p vulnerability-results

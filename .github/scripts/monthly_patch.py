@@ -20,8 +20,6 @@ import os
 import re
 import subprocess
 import sys
-import urllib.error
-import urllib.request
 
 
 TRIAL_REPOSITORY = "yizha1/notation"
@@ -88,20 +86,19 @@ class GitHub:
         self.token = token
 
     def request(self, path, data=None):
-        headers = {
-            "Accept": "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "notation-monthly-patch-trial",
-        }
+        command = ["gh", "api", path, "--method", "POST" if data is not None else "GET"]
+        environment = os.environ.copy()
         if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-        request = urllib.request.Request(
-            f"https://api.github.com/{path}",
-            data=json.dumps(data).encode() if data is not None else None,
-            headers=headers,
+            environment["GH_TOKEN"] = self.token
+        if data is not None:
+            command.extend(["--input", "-"])
+        output = subprocess.check_output(
+            command,
+            input=json.dumps(data) if data is not None else None,
+            text=True,
+            env=environment,
         )
-        with urllib.request.urlopen(request, timeout=60) as response:
-            return json.load(response)
+        return json.loads(output)
 
     def pages(self, path):
         for page in range(1, 1001):
@@ -235,7 +232,7 @@ def main():
                 args.month,
                 args.write,
             ), indent=2))
-    except (ValueError, urllib.error.URLError, subprocess.CalledProcessError) as error:
+    except (ValueError, OSError, subprocess.CalledProcessError) as error:
         print(f"Monthly patch preparation failed: {error}", file=sys.stderr)
         return 1
     return 0

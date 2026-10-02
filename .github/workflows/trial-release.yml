@@ -80,7 +80,7 @@ jobs:
         run: |
           gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             --json isDraft,isPrerelease --jq '.isDraft and .isPrerelease' | grep -x true
-          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
           python3 .github/scripts/check_trial_artifacts.py dist \
             --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA"
   smoke:
@@ -109,7 +109,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PLATFORM: ${{ matrix.platform }}
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
+          go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
           gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             --dir downloaded --pattern "*_${PLATFORM}.*" --pattern '*checksums.txt'
           python3 .github/scripts/check_trial_artifacts.py downloaded \
