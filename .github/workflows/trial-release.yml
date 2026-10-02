@@ -71,7 +71,7 @@ jobs:
         with:
           distribution: goreleaser
           version: v2.18.2
-          args: release --clean --release-notes=trial-notes.txt
+          args: release --clean --draft --release-notes=trial-notes.txt
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - name: Check draft state and scan every built binary
