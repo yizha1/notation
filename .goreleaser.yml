@@ -36,7 +36,8 @@ builds:
       - goos: darwin
         goarch: arm
     ldflags:
-      - -s -w -X {{.ModulePath}}/internal/version.Version={{.Version}} -X {{.ModulePath}}/internal/version.GitCommit={{.FullCommit}} -X {{.ModulePath}}/internal/version.BuildMetadata=
+      # Retain symbols for precise binary scans, but omit DWARF debug information.
+      - -w -X {{.ModulePath}}/internal/version.Version={{.Version}} -X {{.ModulePath}}/internal/version.GitCommit={{.FullCommit}} -X {{.ModulePath}}/internal/version.BuildMetadata=
 archives:
   - formats: [ 'tar.gz' ]
     format_overrides:

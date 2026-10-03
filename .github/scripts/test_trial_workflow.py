@@ -58,6 +58,12 @@ class TrialWorkflowTests(unittest.TestCase):
             runner,
         )
 
+    def test_binary_scans_retain_symbols_without_dwarf_debug_information(self):
+        config = (ROOT / ".goreleaser.yml").read_text()
+        flags = config.split("    ldflags:\n", 1)[1].split("\narchives:", 1)[0]
+        self.assertRegex(flags, r"\s-w(?:\s|$)")
+        self.assertNotRegex(flags, r"\s-s(?:\s|=|$)")
+
 
 if __name__ == "__main__":
     unittest.main()

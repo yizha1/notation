@@ -137,6 +137,9 @@ checks their hashes and exact embedded version/commit metadata, and scans
 each binary before uploading an unpublished draft. Any binary finding or
 scanner failure blocks the upload. Native smoke jobs then download and
 inspect the Linux, macOS, and Windows assets.
+Go symbol tables are retained for precise binary vulnerability analysis,
+while DWARF debugging data remains omitted. Archives are therefore larger
+than fully stripped builds; this does not waive vulnerability findings.
 
 Inspect inherited workflows before activation and prevent external project,
 coverage, and notification integrations from running in the trial. Do not copy
