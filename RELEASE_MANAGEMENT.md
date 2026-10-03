@@ -116,6 +116,28 @@ temporary fork replacements in every affected module and record the actual teste
 commits. Remove those overrides in favor of approved official library versions
 before any separately authorized upstream adoption.
 
+The current CLI candidate requires core `v1.3.1-trial.4` at
+`03171674c94728622c5b1534b5e3396fcb468733` and notation-go
+`v1.3.3-trial.2` at `e45b78bc5fbd4495b3cbe4effc4e0009c5594642`.
+The qualification workflow checks both commits through normal Go module
+resolution and requires the exact versioned replacements in the root, E2E,
+and plugin modules with workspace overrides disabled. It tests Go 1.26 and
+the current stable toolchain. No producer workflow or draft-release polling
+is used.
+
+The notation-go trial includes LDAP `v3.4.14`, which rejects malformed
+RFC 4514 distinguished names previously accepted in trusted identities.
+For example, a JSON policy value containing quotation marks must escape them
+at both the JSON and DN layers:
+`"x509.subject:C=US,ST=WA,O=My \\\"special\\\" Org"`.
+Correct existing malformed policies before using the candidate.
+
+The CLI workflow builds all six platform archives without publishing,
+checks their hashes and exact embedded version/commit metadata, and scans
+each binary before uploading an unpublished draft. Any binary finding or
+scanner failure blocks the upload. Native smoke jobs then download and
+inspect the Linux, macOS, and Windows assets.
+
 Inspect inherited workflows before activation and prevent external project,
 coverage, and notification integrations from running in the trial. Do not copy
 upstream secrets or force-update existing fork branches. Verify workflow

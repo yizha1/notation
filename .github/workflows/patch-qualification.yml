@@ -25,13 +25,19 @@ jobs:
   qualify:
     if: github.repository == 'yizha1/notation' && vars.PATCH_TRIAL_ENABLED == 'true' && (startsWith(github.base_ref, 'release-') || startsWith(github.ref, 'refs/heads/release-') || contains(github.ref_name, '-trial.') || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ['1.26', stable]
+    env:
+      GOWORK: 'off'
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
-          go-version: stable
+          go-version: ${{ matrix.go-version }}
           check-latest: true
           cache-dependency-path: |
             go.sum
@@ -46,20 +52,17 @@ jobs:
               go mod download
               go mod verify
               go mod tidy
-              for library in notation-core-go notation-go; do
-                dependency=$(go list -m -f '{{if .Replace}}{{.Replace.Path}}@{{.Replace.Version}}{{end}}' "github.com/notaryproject/$library")
-                if [[ ! "$dependency" =~ ^github\.com/yizha1/$library@v[0-9]+\.[0-9]+\.[0-9]+-trial\.[1-9][0-9]*$ ]]; then
-                  echo "Expected a versioned fork trial replacement for $library in $module, got: $dependency" >&2
-                  exit 1
-                fi
-              done
             )
           done
+          python3 .github/scripts/check_trial_dependencies.py
           git diff --exit-code -- '**/go.mod' '**/go.sum' go.mod go.sum
       - name: Test automation and run vet, unit tests, and E2E tests
         run: |
           python3 -m unittest discover -s .github/scripts -p 'test_*.py'
-          go vet ./...
+          for module in . test/e2e test/e2e/plugin; do
+            (cd "$module" && go vet ./...)
+          done
+          (cd test/e2e/plugin && go test -race ./...)
           make test
           make e2e
       - name: Install pinned vulnerability scanner
@@ -86,6 +89,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: vulnerability-results
+          name: vulnerability-results-${{ matrix.go-version }}
           path: vulnerability-results/
           if-no-files-found: warn

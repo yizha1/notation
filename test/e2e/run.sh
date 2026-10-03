@@ -69,7 +69,7 @@ if [ ! -f "$NOTATION_E2E_OLD_BINARY_PATH" ]; then
 fi
 
 # install dependency
-go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo@v2.27.1
+go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo@v2.28.1
 
 # build e2e plugin and tar.gz
 PLUGIN_NAME=notation-e2e-plugin
