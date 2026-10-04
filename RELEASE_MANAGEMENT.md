@@ -124,6 +124,9 @@ resolution and requires the exact versioned replacements in the root, E2E,
 and plugin modules with workspace overrides disabled. It tests Go 1.26 and
 the current stable toolchain. No producer workflow or draft-release polling
 is used.
+Qualification also requires the pinned license workflow to check headers
+and all three dependency manifests. That workflow retains the project's
+existing weak-compatible license mode; no new license exception is introduced.
 
 The notation-go trial includes LDAP `v3.4.14`, which rejects malformed
 RFC 4514 distinguished names previously accepted in trusted identities.

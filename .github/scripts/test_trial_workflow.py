@@ -49,6 +49,20 @@ class TrialWorkflowTests(unittest.TestCase):
         self.assertIn("python3 .github/scripts/check_trial_dependencies.py", workflow)
         self.assertIn("name: vulnerability-results-${{ matrix.go-version }}", workflow)
 
+    def test_qualification_requires_the_pinned_license_workflow_for_all_modules(self):
+        workflow = (ROOT / ".github/workflows/patch-qualification.yml").read_text()
+        job = workflow.split("  licenses:\n", 1)[1].split("  qualify:\n", 1)[0]
+        self.assertIn(
+            "uses: yizha1/notation-core-go/.github/workflows/"
+            "reusable-license-checker.yml@03171674c94728622c5b1534b5e3396fcb468733",
+            job,
+        )
+        self.assertIn("github.repository == 'yizha1/notation'", job)
+        self.assertIn("vars.PATCH_TRIAL_ENABLED == 'true'", job)
+        config = (ROOT / ".github/licenserc.yml").read_text()
+        for manifest in ("../go.mod", "../test/e2e/go.mod", "../test/e2e/plugin/go.mod"):
+            self.assertIn(f"    - {manifest}", config.splitlines())
+
     def test_e2e_runner_matches_the_updated_ginkgo_dependency(self):
         manifest = (ROOT / "test/e2e/go.mod").read_text()
         version = re.search(r"github\.com/onsi/ginkgo/v2 (v\S+)", manifest).group(1)

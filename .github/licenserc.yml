@@ -42,3 +42,5 @@ header:
 dependency:
   files:
     - ../go.mod
+    - ../test/e2e/go.mod
+    - ../test/e2e/plugin/go.mod

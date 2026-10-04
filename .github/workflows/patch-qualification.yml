@@ -22,6 +22,9 @@ permissions:
   contents: read
 
 jobs:
+  licenses:
+    if: github.repository == 'yizha1/notation' && vars.PATCH_TRIAL_ENABLED == 'true' && (startsWith(github.base_ref, 'release-') || startsWith(github.ref, 'refs/heads/release-') || contains(github.ref_name, '-trial.') || github.event_name == 'workflow_dispatch')
+    uses: yizha1/notation-core-go/.github/workflows/reusable-license-checker.yml@03171674c94728622c5b1534b5e3396fcb468733
   qualify:
     if: github.repository == 'yizha1/notation' && vars.PATCH_TRIAL_ENABLED == 'true' && (startsWith(github.base_ref, 'release-') || startsWith(github.ref, 'refs/heads/release-') || contains(github.ref_name, '-trial.') || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-24.04
