@@ -30,6 +30,8 @@ header:
 
   paths-ignore:
     - '**/*.md'
+    - '.github/workflows/notation-release-agent.lock.yml'
+    - '.github/aw/actions-lock.json'
     - 'CODEOWNERS'
     - 'LICENSE'
     - 'MAINTAINERS'

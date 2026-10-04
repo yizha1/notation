@@ -51,6 +51,52 @@ The Notation project has reached a stable target version of 1.0.0 and all previo
   - Applicable fixes, including security fixes, may be cherry-picked from master into the latest supported minor release-X.Y branches.
   - Patch release, cut from a release-X.Y branch
 
+### Monthly Dependency Patch Workflow
+
+The workflow, activation prerequisites, dependency ordering, retry behavior and
+isolated fork modes are documented in
+[Monthly dependency patch workflows](.github/MONTHLY_PATCH.md).
+
+The latest stable CLI line has a monthly preparation cycle focused on dependency
+updates and CVE remediation. Publish a patch only when approved changes are ready;
+record an empty cycle as skipped. Urgent security fixes may be released outside
+the monthly cycle. This cadence does not change the supported releases policy.
+The previous supported line receives patches on demand for customer needs and
+applicable security fixes, rather than an automatic monthly dependency refresh.
+
+The central GitHub Agentic Workflow assesses all three repositories on the first
+day at 09:00 UTC, when explicitly enabled. Its validated artifact proposes
+release, skip or defer decisions. A separate deterministic controller invokes
+included release workers in dependency order, using persistent state rather than
+waiting on a runner. Workers merge checked Dependabot updates, backport them,
+qualify signed candidates and verify public packages. One planned patch per
+included repository avoids known producer updates causing a second consumer
+patch. Required checks and reviews are never bypassed. The initial implementation
+is assessment-only in the `yizha1` forks; writing rehearsals require explicit
+plan approval, credentials, reviewed isolated branches and separate activation.
+
+Include compatible direct and transitive dependency updates, patched Go compiler
+and standard-library versions, and relevant build-tool updates. Exclude new
+features, unrelated refactoring, and breaking behavior. Review upstream release
+notes and any increased minimum Go or operating-system requirements. Changes on
+`main` do not automatically update a stable branch, particularly when `main`
+develops a different major version.
+
+For each vulnerability, record the advisory, affected versions and supported
+lines, production versus test/build exposure, reachability, fixed version, owner,
+and remediation or explicit exception rationale. Untriaged findings and scanner
+execution errors block qualification. Known exploitation or serious reachable
+impact requires immediate triage and an out-of-cycle release decision. Keep
+embargoed findings in the project's private security process, not public issues.
+
+Each project has third-party dependencies. Within the Notation repositories,
+notation-go consumes core and the CLI consumes both libraries. A core patch plan
+includes notation-go and CLI; a notation-go-only plan includes CLI; a CLI-only
+plan skips both libraries. Consumers wait only for producers included in the
+approved plan and their actual Dependabot updates. Late, unrelated updates do
+not silently expand the plan. Urgent out-of-cycle patches require a separate
+decision. Each project retains its checks and independent version numbering.
+
 ## Supported Releases
 
 We expect to "support" n (current) and n-1 major.minor releases. "Support" means we expect users to be running that version in production. For example, when v1.3.0 comes out, v1.1.x will no longer be supported for patches, and we encourage users to upgrade to a supported version as soon as possible. Support will be provided best effort by the maintainers via GitHub issues and pull requests.
