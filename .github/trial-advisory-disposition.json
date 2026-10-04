@@ -2,7 +2,7 @@
   "license": "Copyright The Notary Project Authors. SPDX-License-Identifier: Apache-2.0",
   "advisory": "GO-2024-2472",
   "repository": "yizha1/notation",
-  "tag": "v1.3.3-trial.1",
+  "tag": "v1.3.3-trial.2",
   "owner": "yizha1",
   "expires": "2026-11-03",
   "advisory_modified": "2024-06-28T15:28:53Z",

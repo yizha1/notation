@@ -89,12 +89,12 @@ jobs:
             echo '```json'
             cat .github/trial-advisory-disposition.json
             echo '```'
-          } > trial-notes.txt
+          } > "$RUNNER_TEMP/trial-notes.txt"
       - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
         with:
           distribution: goreleaser
           version: v2.18.2
-          args: release --clean --skip=publish --release-notes=trial-notes.txt
+          args: release --clean --skip=publish --release-notes=${{ runner.temp }}/trial-notes.txt
       - name: Check archives and scan every built binary before upload
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
@@ -115,7 +115,7 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             --verify-tag --draft --prerelease --title "$GITHUB_REF_NAME" \
-            --notes-file trial-notes.txt \
+            --notes-file "$RUNNER_TEMP/trial-notes.txt" \
             dist/*.tar.gz dist/*.zip dist/*checksums.txt
           gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
             --json isDraft,isPrerelease --jq '.isDraft and .isPrerelease' | grep -x true

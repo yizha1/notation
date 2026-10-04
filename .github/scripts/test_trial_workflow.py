@@ -90,6 +90,14 @@ class TrialWorkflowTests(unittest.TestCase):
         self.assertIn("cat .github/trial-advisory-disposition.json", workflow[:upload])
         self.assertIn("name: binary-vulnerability-results-${{ matrix.platform }}", workflow)
 
+    def test_release_notes_do_not_dirty_the_packaging_checkout(self):
+        workflow = (ROOT / ".github/workflows/trial-release.yml").read_text()
+        self.assertIn('} > "$RUNNER_TEMP/trial-notes.txt"', workflow)
+        self.assertIn("--release-notes=${{ runner.temp }}/trial-notes.txt", workflow)
+        self.assertIn('--notes-file "$RUNNER_TEMP/trial-notes.txt"', workflow)
+        self.assertNotIn("skip=validate", workflow)
+        self.assertNotIn("skip=git", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

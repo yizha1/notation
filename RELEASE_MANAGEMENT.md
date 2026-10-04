@@ -145,7 +145,7 @@ Go symbol tables are retained for precise binary vulnerability analysis,
 while DWARF debugging data remains omitted. Archives are therefore larger
 than fully stripped builds; this does not waive vulnerability findings.
 
-The unpublished `yizha1/notation` trial `v1.3.3-trial.1` has one explicit
+The unpublished `yizha1/notation` retry `v1.3.3-trial.2` has one explicit
 disposition for GO-2024-2472 in `.github/trial-advisory-disposition.json`.
 It records owner `yizha1`, community guidance, the unchanged advisory revision,
 and a review deadline of November 3, 2026 (UTC). It cannot apply to another
@@ -165,6 +165,10 @@ JSON scanner success alone is not a clean result: findings are parsed explicitly
 An updated advisory or a listed fixed version requires renewed review.
 Without the explicit disposition argument the original fail-on-finding gate
 remains in force. Official release adoption requires a separate disposition.
+Generated release notes live in the runner's temporary directory, outside
+the source checkout, so GoReleaser retains its clean-tree validation.
+The first CLI trial tag is preserved as failed packaging evidence; retries
+use a new signed tag rather than moving an existing one.
 
 Inspect inherited workflows before activation and prevent external project,
 coverage, and notification integrations from running in the trial. Do not copy
