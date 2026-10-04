@@ -1,0 +1,12 @@
+{
+  "license": "Copyright The Notary Project Authors. SPDX-License-Identifier: Apache-2.0",
+  "advisory": "GO-2024-2472",
+  "repository": "yizha1/notation",
+  "tag": "v1.3.3-trial.1",
+  "owner": "yizha1",
+  "expires": "2026-11-03",
+  "advisory_modified": "2024-06-28T15:28:53Z",
+  "reference": "https://github.com/notaryproject/specifications/security/advisories/GHSA-57wx-m636-g3g8",
+  "baseline": "The Go database query for github.com/notaryproject/notation@v1.3.2 includes this advisory. The released binary embeds (devel), so its binary scan does not establish a version-range match.",
+  "reason": "Existing configuration-dependent rollback advisory with community-published deployment guidance and no listed fixed version. Accepted only for this unpublished dependency-update workflow trial. No product verification behavior is changed, no CVE fix or deployment mitigation is claimed, and official release disposition remains separate."
+}

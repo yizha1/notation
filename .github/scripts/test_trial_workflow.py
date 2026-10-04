@@ -78,6 +78,18 @@ class TrialWorkflowTests(unittest.TestCase):
         self.assertRegex(flags, r"\s-w(?:\s|$)")
         self.assertNotRegex(flags, r"\s-s(?:\s|=|$)")
 
+    def test_trial_disposition_and_evidence_apply_before_and_after_upload(self):
+        workflow = (ROOT / ".github/workflows/trial-release.yml").read_text()
+        self.assertEqual(workflow.count(
+            "--trial-disposition .github/trial-advisory-disposition.json"
+        ), 2)
+        self.assertEqual(workflow.count("--evidence-directory binary-vulnerability-results"), 2)
+        upload = workflow.index("gh release create")
+        self.assertIn("if: always()", workflow[:upload])
+        self.assertIn("if: always()", workflow[upload:])
+        self.assertIn("cat .github/trial-advisory-disposition.json", workflow[:upload])
+        self.assertIn("name: binary-vulnerability-results-${{ matrix.platform }}", workflow)
+
 
 if __name__ == "__main__":
     unittest.main()

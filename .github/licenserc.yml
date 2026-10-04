@@ -30,6 +30,8 @@ header:
 
   paths-ignore:
     - '**/*.md'
+    # JSON metadata cannot contain license-header comments.
+    - '.github/trial-advisory-disposition.json'
     - 'CODEOWNERS'
     - 'LICENSE'
     - 'MAINTAINERS'

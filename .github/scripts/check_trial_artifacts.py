@@ -22,6 +22,8 @@ import tarfile
 import tempfile
 import zipfile
 
+from trial_vulnerability_policy import load_disposition, scan_binary
+
 
 EXPECTED = {
     "linux_amd64", "linux_arm64", "linux_armv7",
@@ -60,7 +62,13 @@ def native_values(output, label):
             if line.startswith(prefix)]
 
 
-def verify(directory, expected_version=None, expected_commit=None, smoke_platform=None):
+def verify(directory, expected_version=None, expected_commit=None, smoke_platform=None,
+           disposition=None, evidence_directory=None):
+    policy = None
+    if disposition:
+        if not evidence_directory:
+            raise ValueError("Trial advisory disposition requires retained scan evidence")
+        policy = load_disposition(disposition, expected_version, expected_commit)
     expected = {smoke_platform} if smoke_platform else EXPECTED
     if not expected.issubset(EXPECTED):
         raise ValueError("Unsupported smoke-test platform")
@@ -120,8 +128,12 @@ def verify(directory, expected_version=None, expected_commit=None, smoke_platfor
                     raise ValueError(f"Version metadata mismatch: {archive.name}")
                 if expected_commit and values["GitCommit"] != [expected_commit]:
                     raise ValueError(f"Commit metadata mismatch: {archive.name}")
-            result = subprocess.run(["govulncheck", "-mode=binary", str(path)])
-            failed = failed or result.returncode != 0
+            if policy is None:
+                result = subprocess.run(["govulncheck", "-mode=binary", str(path)])
+                failed = failed or result.returncode != 0
+            else:
+                passed = scan_binary(path, platform, policy, evidence_directory)
+                failed = failed or not passed
             if platform == smoke_platform:
                 path.chmod(0o755)
                 output = subprocess.check_output([str(path), "version"], text=True)
@@ -142,5 +154,8 @@ if __name__ == "__main__":
     parser.add_argument("--version")
     parser.add_argument("--commit")
     parser.add_argument("--smoke-platform", choices=sorted(EXPECTED))
+    parser.add_argument("--trial-disposition")
+    parser.add_argument("--evidence-directory")
     args = parser.parse_args()
-    verify(args.directory, args.version, args.commit, args.smoke_platform)
+    verify(args.directory, args.version, args.commit, args.smoke_platform,
+           args.trial_disposition, args.evidence_directory)

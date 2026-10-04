@@ -137,12 +137,34 @@ Correct existing malformed policies before using the candidate.
 
 The CLI workflow builds all six platform archives without publishing,
 checks their hashes and exact embedded version/commit metadata, and scans
-each binary before uploading an unpublished draft. Any binary finding or
-scanner failure blocks the upload. Native smoke jobs then download and
+each binary before uploading an unpublished draft. Actionable binary findings
+and scanner failures block the upload unless an explicitly scoped trial
+disposition applies. Native smoke jobs then download and
 inspect the Linux, macOS, and Windows assets.
 Go symbol tables are retained for precise binary vulnerability analysis,
 while DWARF debugging data remains omitted. Archives are therefore larger
 than fully stripped builds; this does not waive vulnerability findings.
+
+The unpublished `yizha1/notation` trial `v1.3.3-trial.1` has one explicit
+disposition for GO-2024-2472 in `.github/trial-advisory-disposition.json`.
+It records owner `yizha1`, community guidance, the unchanged advisory revision,
+and a review deadline of November 3, 2026 (UTC). It cannot apply to another
+repository, tag, mismatched commit, or a run on or after that deadline.
+The database also lists this advisory for the previous stable `v1.3.2`.
+The official released binary embeds `(devel)`, so its binary scan cannot
+establish that version-range match; the baseline module-version query does.
+
+This disposition does not fix the CVE or assert that consumers enforce the
+published deployment mitigations. Notation verification behavior is unchanged.
+Every binary is still scanned with pinned govulncheck `v1.8.0`; complete JSON,
+the scanner's rendered text, and per-platform disposition summaries are retained
+even when qualification fails. Every other symbol-level finding and every
+scanner/protocol error remains blocking. Module-only findings remain visible
+and informational, matching the existing symbol-level gate.
+JSON scanner success alone is not a clean result: findings are parsed explicitly.
+An updated advisory or a listed fixed version requires renewed review.
+Without the explicit disposition argument the original fail-on-finding gate
+remains in force. Official release adoption requires a separate disposition.
 
 Inspect inherited workflows before activation and prevent external project,
 coverage, and notification integrations from running in the trial. Do not copy
