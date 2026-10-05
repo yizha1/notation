@@ -93,7 +93,7 @@ Each project has third-party dependencies. Within the Notation repositories,
 notation-go consumes core and the CLI consumes both libraries. A core patch plan
 includes notation-go and CLI; a notation-go-only plan includes CLI; a CLI-only
 plan skips both libraries. Consumers wait only for producers included in the
-approved plan and their actual Dependabot updates. Late, unrelated updates do
+approved plan and their checked producer-update PRs. Late, unrelated updates do
 not silently expand the plan. Urgent out-of-cycle patches require a separate
 decision. Each project retains its checks and independent version numbering.
 

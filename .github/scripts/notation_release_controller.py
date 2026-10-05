@@ -14,6 +14,7 @@
 """Validate AI assessments and advance an explicitly approved fork release DAG."""
 
 import argparse
+import base64
 import copy
 import datetime
 import hashlib
@@ -73,6 +74,25 @@ def fork_metadata(api, repository):
     if not metadata.get("fork") or metadata.get("private") or metadata.get("default_branch") != "main":
         raise ValueError(f"Expected a public fork with trusted default main: {repository}")
     return metadata
+
+
+def installed_worker(api, repository, commit):
+    files = {
+        WORKER_PATH: ("MONTHLY_PATCH_COORDINATOR_REQUIRED: 'true'", "  workflow_dispatch:"),
+        ".github/scripts/notation_release_controller.py": ("def worker_authorization(",),
+        ".github/scripts/monthly_release.py": ("coordinator_authorization(",),
+        ".github/scripts/notation_fork_propagation.py": ("def prepare(", "def publish("),
+    }
+    for path, required in files.items():
+        item = api.optional(f"repos/{repository}/contents/{path}?ref={commit}")
+        if item is None:
+            return False
+        if item.get("encoding") != "base64":
+            raise ValueError(f"Cannot inspect trusted worker installation: {path}")
+        content = base64.b64decode(item["content"]).decode("utf-8")
+        if any(token not in content for token in required):
+            return False
+    return True
 
 
 def scan_source(repository, commit, directories, output):
@@ -143,7 +163,7 @@ def collect(api, month, output):
         if main is None or branch is None:
             blockers.append("Reviewed isolated main/release branches are missing")
         workflow = api.optional(f"repos/{repository}/actions/workflows/monthly-patch-release.yml")
-        if workflow is None or workflow.get("state") != "active":
+        if workflow is None or workflow.get("state") != "active" or not installed_worker(api, repository, automation):
             blockers.append("Install and enable the coordinator-aware release worker on fork main")
         source = repository if branch else f"notaryproject/{repository.split('/')[1]}"
         commit = branch["commit"]["sha"] if branch else api.request(
@@ -602,27 +622,38 @@ def worker_authorization(api, repository, month, plan=None, allow_previous=False
     return {"issue": int(issue_number), "plan_id": plan_id, "snapshot": snapshot, "producers": producers}
 
 
-def producer_pull(api, repository, pull, producers):
-    """Permit new propagation PRs, but not unrelated changes hidden in grouped updates."""
-    if not producers or (pull["head"].get("repo") or {}).get("full_name") != repository:
-        return False
-    files = list(api.pages(f"repos/{repository}/pulls/{pull['number']}/files"))
-    paths = {f"{directory}/go.{extension}".removeprefix("./") for directory in release.modules(repository)
-             for extension in ("mod", "sum")}
-    if not files or any(item["filename"] not in paths or (item.get("previous_filename") and item["previous_filename"] not in paths) for item in files):
-        return False
+def module_version(value):
+    match = re.fullmatch(
+        r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+        r"(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?",
+        value if isinstance(value, str) else "",
+    )
+    if match is None:
+        raise ValueError("Invalid producer module version")
+    major, minor, patch, prerelease = match.groups()
+    identifiers = []
+    for identifier in prerelease.split(".") if prerelease is not None else ():
+        if identifier.isdecimal():
+            if len(identifier) > 1 and identifier.startswith("0"):
+                raise ValueError("Invalid numeric producer prerelease identifier")
+            identifiers.append((0, int(identifier)))
+        else:
+            identifiers.append((1, identifier))
+    return int(major), int(minor), int(patch), prerelease is None, tuple(identifiers)
+
+
+def producer_manifests(before_modules, after_modules, producers, producer_modules, current):
     changed = False
     allowed = {f"github.com/notaryproject/{name}" for name in producers}
     def go_version(value):
         if not isinstance(value, str) or not re.fullmatch(r"\d+\.\d+(?:\.\d+)?", value):
             raise ValueError("Invalid producer Go requirement")
         return tuple(map(int, value.split("."))) + (0,) * (3 - len(value.split(".")))
-    producer_go = {name: go_version(api.manifest(item["repository"], item["version"], ".")["Go"])
-                   for name, item in producers.items()}
-    for directory in release.modules(repository):
-        before = api.manifest(repository, pull["base"]["sha"], directory)
-        after = api.manifest(repository, pull["head"]["sha"], directory)
+    producer_go = {name: go_version(manifest["Go"]) for name, manifest in producer_modules.items()}
+    for directory, before in before_modules.items():
+        after = after_modules[directory]
         changed_go = []
+        changed_producers = []
         for name, item in producers.items():
             module = f"github.com/notaryproject/{name}"
             def dependency(manifest):
@@ -633,6 +664,7 @@ def producer_pull(api, repository, pull, producers):
                     return False
                 changed = True
                 changed_go.append(producer_go[name])
+                changed_producers.append(name)
         floor = max([go_version(before["Go"]), *changed_go])
         if before["Go"] != after["Go"] and go_version(after["Go"]) != floor:
             return False
@@ -640,20 +672,93 @@ def producer_pull(api, repository, pull, producers):
             chain = after.get("Toolchain") or ""
             if not isinstance(chain, str) or not chain.startswith("go"):
                 return False
-            current = release.run(["go", "env", "GOVERSION"]).strip().removeprefix("go")
-            if not floor <= go_version(chain.removeprefix("go")) <= go_version(current):
+            if not floor <= go_version(chain.removeprefix("go")) <= go_version(current.removeprefix("go")):
                 return False
-        def unrelated(manifest):
+        required = {}
+        for name in changed_producers:
+            for entry in producer_modules[name].get("Require") or []:
+                path, version = entry["Path"], entry["Version"]
+                if path not in required or module_version(version) > module_version(required[path]):
+                    required[path] = version
+        original = {entry["Path"]: entry for entry in before.get("Require") or []}
+        updated = {entry["Path"]: entry for entry in after.get("Require") or []}
+        for path, previous in original.items():
+            if path not in allowed and not previous.get("Indirect") and path in required:
+                if (module_version(required[path]) > module_version(previous["Version"])
+                        and updated.get(path, {}).get("Version") != required[path]):
+                    return False
+        def unrelated(manifest, normalize=False):
             result = copy.deepcopy(manifest)
             # MVS can change indirect requirements when a producer is updated.
             result["Require"] = [item for item in result.get("Require") or [] if item["Path"] not in allowed and not item.get("Indirect")]
+            for entry in result["Require"]:
+                path = entry["Path"]
+                previous = original.get(path)
+                if (normalize and previous is not None and path in required
+                        and entry["Version"] == required[path]
+                        and module_version(required[path]) > module_version(previous["Version"])):
+                    entry["Version"] = previous["Version"]
             result["Replace"] = [item for item in result.get("Replace") or [] if item["Old"]["Path"] not in allowed]
             result.pop("Go", None)
             result.pop("Toolchain", None)
             return result
-        if unrelated(before) != unrelated(after):
+        if unrelated(before) != unrelated(after, normalize=True):
             return False
     return changed
+
+
+def producer_pull(api, repository, pull, producers):
+    """Permit new propagation PRs, but not unrelated changes hidden in grouped updates."""
+    if not producers or (pull["head"].get("repo") or {}).get("full_name") != repository:
+        return False
+    files = list(api.pages(f"repos/{repository}/pulls/{pull['number']}/files"))
+    paths = {f"{directory}/go.{extension}".removeprefix("./") for directory in release.modules(repository)
+             for extension in ("mod", "sum")}
+    if not files or any(item["filename"] not in paths or (item.get("previous_filename") and item["previous_filename"] not in paths) for item in files):
+        return False
+    before = {directory: api.manifest(repository, pull["base"]["sha"], directory) for directory in release.modules(repository)}
+    after = {directory: api.manifest(repository, pull["head"]["sha"], directory) for directory in release.modules(repository)}
+    producer_modules = {name: api.manifest(item["repository"], item["version"], ".") for name, item in producers.items()}
+    current = release.run(["go", "env", "GOVERSION"]).strip()
+    return producer_manifests(before, after, producers, producer_modules, current)
+
+
+def propagation_branch(month, plan_id):
+    if not release.MONTH.fullmatch(month) or not DIGEST.fullmatch(plan_id):
+        raise ValueError("Invalid fork propagation identity")
+    return f"monthly-patch-test-propagation/{month}/{plan_id}"
+
+
+def fork_propagation_pull(api, repository, pull, authorization):
+    if repository not in REPOSITORIES or not authorization or not authorization["producers"]:
+        return False
+    if pull.get("user", {}).get("login") != os.environ.get("MONTHLY_PATCH_ACTOR"):
+        return False
+    blocks = re.findall(r"```json\n(.*?)\n```", pull.get("body") or "", flags=re.DOTALL)
+    if len(blocks) != 1:
+        return False
+    receipt = load_json(blocks[0])
+    if set(receipt) != {"schema", "repository", "month", "controller_issue", "plan_id", "producers", "base", "head"}:
+        return False
+    if (type(receipt["schema"]) is not int or receipt["schema"] != 1 or receipt["repository"] != repository
+            or receipt["controller_issue"] != authorization["issue"] or receipt["plan_id"] != authorization["plan_id"]
+            or receipt["producers"] != authorization["producers"] or not release.MONTH.fullmatch(receipt["month"])
+            or not authorization["snapshot"]["tag"].endswith("-monthly-test." + receipt["month"].replace("-", ""))
+            or not release.SHA.fullmatch(receipt["base"]) or not release.SHA.fullmatch(receipt["head"])
+            or pull["base"]["ref"] != authorization["snapshot"]["main"]
+            or (pull["head"].get("repo") or {}).get("full_name") != repository
+            or pull["head"].get("ref") != propagation_branch(receipt["month"], receipt["plan_id"])
+            or pull["head"]["sha"] != receipt["head"]):
+        return False
+    marker = f"<!-- notation-fork-propagation:{receipt['month']}:{receipt['plan_id']} -->"
+    if marker not in (pull.get("body") or ""):
+        return False
+    commit = api.request(f"repos/{repository}/commits/{receipt['head']}")
+    if not commit["commit"]["verification"]["verified"] or (commit.get("author") or {}).get("login") != os.environ["MONTHLY_PATCH_ACTOR"]:
+        raise ValueError("Fork propagation PR requires a verified commit by the configured actor")
+    scoped = copy.deepcopy(pull)
+    scoped["base"]["sha"] = receipt["base"]
+    return producer_pull(api, repository, scoped, authorization["producers"])
 
 
 def scoped_pull(api, repository, pull, authorization, merged=()):
@@ -674,6 +779,8 @@ def scoped_pull(api, repository, pull, authorization, merged=()):
         if pull.get("merge_commit_sha") != commits[number]:
             raise ValueError("Assessed dependency backport provenance changed")
         return True
+    if pull.get("user", {}).get("login") != "dependabot[bot]":
+        return fork_propagation_pull(api, repository, pull, authorization)
     return producer_pull(api, repository, pull, authorization["producers"])
 
 

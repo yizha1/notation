@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import copy
+import base64
 import datetime
 import json
 import os
@@ -230,6 +231,24 @@ class ReleaseAssessmentTests(unittest.TestCase):
         api = ControllerAPI()
         with patch.object(api, "request", return_value={"status": "ahead", "ahead_by": 2, "commits": [{"sha": MAIN}]}), self.assertRaisesRegex(ValueError, "Incomplete"):
             coordinator.compare_commits(api, CORE, BRANCH, MAIN)
+
+    def test_workflow_registration_does_not_prove_installation_on_main(self):
+        api = ControllerAPI()
+        self.assertFalse(coordinator.installed_worker(api, CORE, AUTOMATION))
+        required = {
+            coordinator.WORKER_PATH: "  workflow_dispatch:\nMONTHLY_PATCH_COORDINATOR_REQUIRED: 'true'\n",
+            ".github/scripts/notation_release_controller.py": "def worker_authorization(",
+            ".github/scripts/monthly_release.py": "coordinator_authorization(",
+            ".github/scripts/notation_fork_propagation.py": "def prepare(\ndef publish(",
+        }
+        def file(path):
+            self.assertTrue(path.endswith("?ref=" + AUTOMATION))
+            name = path.split("/contents/", 1)[1].split("?")[0]
+            return {"encoding": "base64", "content": base64.b64encode(required[name].encode()).decode()}
+        with patch.object(api, "optional", side_effect=file):
+            self.assertTrue(coordinator.installed_worker(api, CORE, AUTOMATION))
+            required[".github/scripts/monthly_release.py"] = "legacy independent publisher"
+            self.assertFalse(coordinator.installed_worker(api, CORE, AUTOMATION))
 
 
 class ReleaseControllerTests(unittest.TestCase):
@@ -630,6 +649,8 @@ class WorkerAuthorizationTests(unittest.TestCase):
         root = pathlib.Path(__file__).parent.parent
         header = "\n".join(pathlib.Path(release.__file__).read_text().splitlines()[:13])
         files = [root / "scripts/notation_release_controller.py", pathlib.Path(__file__),
+                 root / "scripts/notation_fork_propagation.py",
+                 root / "workflows/notation-fork-ci.yml",
                  root / "workflows/monthly-patch-release.yml", root / "workflows/notation-release-validation.yml"]
         controller = root / "workflows/notation-release-controller.yml"
         if controller.exists():
