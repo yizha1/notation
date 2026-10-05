@@ -15,8 +15,6 @@ name: Monthly dependency patch release
 run-name: 'Monthly patch ${{ inputs.month }} ${{ inputs.plan_id }} #${{ inputs.controller_issue }} attempt ${{ inputs.attempt }}'
 
 on:
-  push:
-    branches: ['monthly-patch-test-code*']
   workflow_dispatch:
     inputs:
       mode:
@@ -63,9 +61,8 @@ jobs:
   prepare:
     if: >-
       github.repository_owner == 'yizha1' &&
-      (github.event_name == 'push' ||
-       (github.event_name == 'workflow_dispatch' &&
-        (inputs.mode == 'dry-run' || github.actor == vars.MONTHLY_PATCH_ACTOR)))
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.mode == 'dry-run' || github.actor == vars.MONTHLY_PATCH_ACTOR)
     runs-on: ubuntu-24.04
     outputs:
       action: ${{ steps.cycle.outputs.action }}
@@ -93,21 +90,19 @@ jobs:
       - name: Merge checked Dependabot PRs and prepare an unpushed release candidate
         id: cycle
         env:
-          GH_TOKEN: ${{ github.event_name != 'push' && inputs.mode != 'dry-run' && secrets.MONTHLY_PATCH_TOKEN || github.token }}
-          MONTHLY_PATCH_TOKEN_READY: ${{ github.event_name != 'push' && inputs.mode != 'dry-run' && secrets.MONTHLY_PATCH_TOKEN != '' }}
+          GH_TOKEN: ${{ inputs.mode == 'rehearse' && secrets.MONTHLY_PATCH_TOKEN || github.token }}
+          MONTHLY_PATCH_TOKEN_READY: ${{ inputs.mode == 'rehearse' && secrets.MONTHLY_PATCH_TOKEN != '' }}
           MONTHLY_PATCH_ENABLED: ${{ vars.MONTHLY_PATCH_ENABLED }}
           MONTHLY_PATCH_REHEARSAL_ENABLED: ${{ vars.MONTHLY_PATCH_REHEARSAL_ENABLED }}
-          MONTHLY_PATCH_SIGNING_KEY: ${{ github.event_name != 'push' && inputs.mode != 'dry-run' && secrets.MONTHLY_PATCH_SIGNING_KEY || '' }}
+          MONTHLY_PATCH_SIGNING_KEY: ${{ inputs.mode == 'rehearse' && secrets.MONTHLY_PATCH_SIGNING_KEY || '' }}
           MONTHLY_PATCH_SIGNER_EMAIL: ${{ vars.MONTHLY_PATCH_SIGNER_EMAIL }}
           MONTHLY_PATCH_SIGNER_NAME: ${{ vars.MONTHLY_PATCH_SIGNER_NAME }}
           MONTHLY_PATCH_SIGNER_LOGIN: ${{ vars.MONTHLY_PATCH_SIGNER_LOGIN }}
           MONTHLY_PATCH_ACTOR: ${{ vars.MONTHLY_PATCH_ACTOR }}
-          MODE: ${{ github.event_name == 'push' && 'dry-run' || inputs.mode }}
-          START_CYCLE: ${{ github.event_name == 'workflow_dispatch' }}
+          MODE: ${{ inputs.mode }}
           REQUESTED_MONTH: ${{ inputs.month }}
         run: |
-          args=()
-          if [[ "$START_CYCLE" == true ]]; then args+=(--start); fi
+          args=(--start)
           if [[ -n "$REQUESTED_MONTH" ]]; then args+=(--month "$REQUESTED_MONTH"); fi
           python3 .github/scripts/monthly_release.py prepare \
             --mode "$MODE" --output "$RUNNER_TEMP/monthly-candidate" "${args[@]}"

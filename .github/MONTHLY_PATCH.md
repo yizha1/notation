@@ -191,14 +191,17 @@ writing rehearsals and hosted AI execution, respectively.
 Controller and writing workers execute only from assessed trusted default `main`.
 Its read-only default token is used for downloaded-package verification.
 Write credentials and signing material are not passed to source or native
-package-test jobs, nor to push-triggered/no-write dry runs.
+package-test jobs, nor to validation jobs or no-write dry runs.
 
 ## Fork testing
 
-The worker offers `dry-run` and coordinator-authorized `rehearse`. A push to a
-`monthly-patch-test-code*` branch runs only a read-only dry run in a fork.
-It cannot merge PRs, change branches, create tracking issues or publish tags.
-A dry-run report can identify missing branch/setup prerequisites.
+The worker offers manually dispatched `dry-run` and coordinator-authorized
+`rehearse`. Test-branch pushes and pull requests run the separate read-only
+automation validation, not release preparation. Installing or testing the agent
+does not require release branches or release credentials.
+A manually dispatched worker dry run cannot merge PRs, change branches, create
+tracking issues or publish tags. Missing branch/setup prerequisites remain
+explicit blockers for that release-preparation check.
 
 Seed reviewed dedicated branches before the writing assessment:
 

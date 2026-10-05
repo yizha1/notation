@@ -614,6 +614,10 @@ class WorkerAuthorizationTests(unittest.TestCase):
         controller = (root / "workflows/notation-release-controller.yml").read_text() if (root / "workflows/notation-release-controller.yml").exists() else ""
         agent = (root / "workflows/notation-release-agent.md").read_text() if (root / "workflows/notation-release-agent.md").exists() else ""
         self.assertNotIn("  schedule:", worker)
+        self.assertNotIn("  push:", worker)
+        self.assertNotIn("  pull_request:", worker)
+        self.assertIn("  workflow_dispatch:", worker)
+        self.assertIn("  push:", (root / "workflows/notation-release-validation.yml").read_text())
         self.assertNotIn("options: [dry-run, rehearse, execute]", worker)
         self.assertIn("MONTHLY_PATCH_COORDINATOR_REQUIRED: 'true'", worker)
         self.assertIn("types: [notation-release-progress]", controller) if controller else None
