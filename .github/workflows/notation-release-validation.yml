@@ -19,6 +19,7 @@ on:
     paths:
       - '.github/scripts/**'
       - '.github/workflows/monthly-patch-release.yml'
+      - '.github/workflows/notation-fork-ci.yml'
       - '.github/workflows/notation-release-*'
       - '.github/licenserc.yml'
       - '.gitattributes'
@@ -26,6 +27,7 @@ on:
     paths:
       - '.github/scripts/**'
       - '.github/workflows/monthly-patch-release.yml'
+      - '.github/workflows/notation-fork-ci.yml'
       - '.github/workflows/notation-release-*'
       - '.github/licenserc.yml'
       - '.gitattributes'
@@ -59,6 +61,7 @@ jobs:
         run: |
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
           actionlint .github/workflows/monthly-patch-release.yml \
+            .github/workflows/notation-fork-ci.yml \
             .github/workflows/notation-release-validation.yml
       - name: Validate the compiled assessment workflow when present
         env:

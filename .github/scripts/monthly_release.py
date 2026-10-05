@@ -397,9 +397,14 @@ def includes_version(actual, expected):
 
 
 def producer_lag(api, repository, ref, mode, producers, at_least=False):
+    manifests = {directory: api.manifest(repository, ref, directory) for directory in modules(repository)} if producers else {}
+    return producer_lag_from_manifests(repository, manifests, mode, producers, at_least)
+
+
+def producer_lag_from_manifests(repository, manifests, mode, producers, at_least=False):
     lag = []
     for directory in modules(repository):
-        manifest = api.manifest(repository, ref, directory) if producers else None
+        manifest = manifests[directory] if producers else None
         for name, producer in producers.items():
             module = f"github.com/notaryproject/{name}"
             if directory != "." and not any(item["Path"] == module for item in manifest.get("Require") or []):
@@ -533,10 +538,14 @@ def baseline_plan(api, repository, month, mode, state=None):
     }
 
 
-def inventory(api, repository, branch):
+def inventory(api, repository, branch, authorization=None):
     result = []
     for pull in api.pulls(repository, branch, "closed"):
-        if dependabot(pull, branch) and pull.get("merged_at"):
+        eligible = dependabot(pull, branch)
+        if not eligible and authorization:
+            from notation_release_controller import fork_propagation_pull
+            eligible = fork_propagation_pull(api, repository, pull, authorization)
+        if eligible and pull.get("merged_at"):
             if not SHA.fullmatch(pull.get("merge_commit_sha") or ""):
                 raise ValueError("Merged Dependabot PR has no valid source commit")
             result.append({
@@ -642,15 +651,20 @@ def prepare(api, repository, mode, month, directory, output, start=False, reconc
         or main["commit"]["sha"] != snapshot["main_head"]
     ):
         raise ValueError("Assessed source refs changed before worker execution")
-    if mode == "execute":
+    if mode in {"execute", "rehearse"}:
         check_publisher_guard(api, repository, state["branch"])
     producers = (authorization["producers"] if authorization else
                  discovered if discovered is not None else producer_versions(api, repository, effective_mode))
     state["producers"] = producers
-    open_pulls = sorted(
-        [item for item in api.pulls(repository, state["main"], "open") if dependabot(item, state["main"])],
-        key=lambda item: item["number"],
-    )
+    def eligible(pull):
+        if dependabot(pull, state["main"]):
+            return True
+        if authorization:
+            from notation_release_controller import fork_propagation_pull
+            return fork_propagation_pull(api, repository, pull, authorization)
+        return False
+    open_pulls = sorted([item for item in api.pulls(repository, state["main"], "open") if eligible(item)],
+                        key=lambda item: item["number"])
     if authorization:
         from notation_release_controller import scoped_pull
         open_pulls = [pull for pull in open_pulls if scoped_pull(api, repository, pull, authorization)]
@@ -668,7 +682,7 @@ def prepare(api, repository, mode, month, directory, output, start=False, reconc
         cycle.save(state)
         for initial in open_pulls:
             pull = api.request(f"repos/{repository}/pulls/{initial['number']}")
-            if not dependabot(pull, state["main"]) or pull.get("state") != "open":
+            if not eligible(pull) or pull.get("state") != "open":
                 raise ValueError("PR identity changed after discovery; retry from a fresh inventory")
             if pull["head"]["repo"]["full_name"] != repository:
                 raise ValueError("Dependabot head is outside the target repository")
@@ -693,7 +707,7 @@ def prepare(api, repository, mode, month, directory, output, start=False, reconc
             state.update(status="waiting", reason="; ".join(waiting))
             cycle.save(state)
             return {**state, "action": "waiting"}
-        merged_pulls = inventory(api, repository, state["main"])
+        merged_pulls = inventory(api, repository, state["main"], authorization)
         if authorization:
             merged_pulls = [
                 item for item in merged_pulls

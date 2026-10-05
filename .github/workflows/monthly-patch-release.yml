@@ -116,6 +116,74 @@ jobs:
             ${{ runner.temp }}/monthly-candidate/candidate.bundle
           if-no-files-found: warn
 
+  propagation-source:
+    needs: prepare
+    if: >-
+      inputs.mode == 'rehearse' && needs.prepare.outputs.action == 'waiting' &&
+      github.repository != 'yizha1/notation-core-go'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: stable
+          check-latest: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: monthly-candidate
+          path: ${{ runner.temp }}/monthly-candidate
+      - name: Prepare exact fork replacements without write credentials
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MONTHLY_PATCH_ACTOR: ${{ vars.MONTHLY_PATCH_ACTOR }}
+        run: |
+          python3 .github/scripts/notation_fork_propagation.py prepare \
+            --plan "$RUNNER_TEMP/monthly-candidate/plan.json" \
+            --output "$RUNNER_TEMP/fork-propagation"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: monthly-fork-propagation
+          path: ${{ runner.temp }}/fork-propagation/propagation.json
+          if-no-files-found: error
+
+  propagation-publish:
+    needs: propagation-source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: stable
+          check-latest: true
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: monthly-fork-propagation
+          path: ${{ runner.temp }}/fork-propagation
+      - name: Validate and open a signed producer-only PR for normal CI
+        env:
+          GH_TOKEN: ${{ secrets.MONTHLY_PATCH_TOKEN }}
+          MONTHLY_PATCH_TOKEN_READY: ${{ secrets.MONTHLY_PATCH_TOKEN != '' }}
+          MONTHLY_PATCH_REHEARSAL_ENABLED: ${{ vars.MONTHLY_PATCH_REHEARSAL_ENABLED }}
+          MONTHLY_PATCH_SIGNING_KEY: ${{ secrets.MONTHLY_PATCH_SIGNING_KEY }}
+          MONTHLY_PATCH_SIGNER_EMAIL: ${{ vars.MONTHLY_PATCH_SIGNER_EMAIL }}
+          MONTHLY_PATCH_SIGNER_LOGIN: ${{ vars.MONTHLY_PATCH_SIGNER_LOGIN }}
+          MONTHLY_PATCH_ACTOR: ${{ vars.MONTHLY_PATCH_ACTOR }}
+        run: |
+          python3 .github/scripts/notation_fork_propagation.py publish \
+            --prepared "$RUNNER_TEMP/fork-propagation/propagation.json" \
+            --output "$RUNNER_TEMP/propagation-publication"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: monthly-fork-propagation-publication
+          path: ${{ runner.temp }}/propagation-publication/propagation.json
+          if-no-files-found: error
+
   qualify:
     needs: prepare
     if: needs.prepare.outputs.action == 'qualify'
@@ -401,7 +469,7 @@ jobs:
           if-no-files-found: error
 
   record-failure:
-    needs: [prepare, qualify, publish, verify, complete]
+    needs: [prepare, propagation-source, propagation-publish, qualify, publish, verify, complete]
     if: >-
       always() && contains(needs.*.result, 'failure') &&
       needs.prepare.outputs.mode != '' && needs.prepare.outputs.mode != 'dry-run'
@@ -430,7 +498,7 @@ jobs:
             --reason "A workflow gate failed. Inspect $FAILURE_URL and its retained evidence before retrying."
 
   notify-controller:
-    needs: [prepare, qualify, publish, verify, complete, record-failure]
+    needs: [prepare, propagation-source, propagation-publish, qualify, publish, verify, complete, record-failure]
     if: always() && needs.prepare.result == 'success' && needs.prepare.outputs.mode == 'rehearse'
     runs-on: ubuntu-24.04
     steps:

@@ -24,9 +24,9 @@ Monthly schedule or manual assessment
                  |
  core worker -> verify public core package
                  |
- Go worker -> consume planned core through real Dependabot PR
+ Go worker -> consume planned core through a checked producer-update PR
                  |
- CLI worker -> consume planned libraries through real Dependabot PRs
+ CLI worker -> consume planned libraries through checked producer-update PRs
                  |
  Verify downloaded CLI packages -> complete cycle
 ```
@@ -74,7 +74,7 @@ in `yizha1/notation`. The controller invokes each included repository's existing
 baseline, isolated branches, tag, cycle, and dispatch attempt are checked.
 Every writing worker stage validates its coordinator authorization.
 
-The worker merges actual `dependabot[bot]` PRs to its isolated main branch only with successful
+The worker merges actual `dependabot[bot]` third-party update PRs to its isolated main branch only with successful
 CI, a clean mergeable head, and satisfied required reviews. It uses normal
 GitHub squash merges pinned to the observed head SHA. It never invokes an
 administrative merge or resolves conflicts automatically.
@@ -86,8 +86,15 @@ New Dependabot propagation PRs may enter the fixed scope only when they update
 the planned Notation producers without unrelated direct dependencies, replacements
 or workflow changes. Indirect requirements and a producer-required Go floor may
 change; module/tidy, minimum-Go and qualification gates still apply.
-An unconsumed planned version waits for its genuine update PR and normal checks.
-The workflow never manufactures a PR or edits dependency versions itself.
+An unconsumed planned version waits for its scoped update PR and normal checks.
+Dependabot skips Go dependencies that use `replace` directives. The fork-only
+worker therefore prepares exact planned replacement updates in a read-only job,
+then validates and signs a producer-only PR in a separate writing job. Only the
+configured actor's verified commit and matching controller receipt authorize
+this exception to Dependabot identity. The updater cannot change unrelated
+direct dependencies, source, workflows or replacements. Its PR still needs
+normal successful CI and required reviews. This path cannot execute in canonical
+repositories, and does not give the assessment agent write access.
 
 Workers notify the controller, not consumers. Every six hours the controller
 also resumes existing approved state, including older unfinished months. It
@@ -174,8 +181,9 @@ writing rehearsals and hosted AI execution, respectively.
   all three for trusted controller/worker state.
 * Secret `MONTHLY_PATCH_TOKEN`: a dedicated GitHub App or fine-grained token
   scoped to the three forks. It needs contents, pull requests and issues write
-  access, actions read/write for worker dispatch/status/artifacts, and contents
-  write for controller wakeup dispatches. Do not give it branch-rule
+  access, actions read/write for worker dispatch/status/artifacts, and workflows
+  write if workflow dependency updates are included. Contents write also permits
+  controller wakeup dispatches. Do not give it branch-rule
   bypass rights. Unlike `GITHUB_TOKEN`, this credential lets normal merge
   events trigger CI and Dependabot follow-up activity.
 * Secret `MONTHLY_PATCH_SIGNING_KEY`: a dedicated unencrypted SSH signing key.
@@ -219,8 +227,10 @@ track the fork producer using temporary Go `replace` directives. Canonical
 requirements otherwise track `notaryproject`, not fork releases. Configure
 Dependabot's `target-branch` for the isolated branches; GitHub reads its config
 from the default branch, so installing that fork-only configuration needs a
-separately approved default-branch/config change. Keep ordinary weekly version
-checks so a producer tag can generate its consumer PR during the monthly window.
+separately approved default-branch/config change. The rehearsal uses daily
+third-party checks and weekly Actions checks. Fork replacement propagation uses
+the signed producer-only updater, not Dependabot, because replaced dependencies
+are unsupported by Dependabot.
 The dormant canonical engine rejects trial replacements. Canonical publishing
 is not exposed by these fork coordinator workflows. Upstream adoption also
 needs the existing CLI tag-publisher actor guard on main and its release branch.
@@ -228,6 +238,62 @@ needs the existing CLI tag-publisher actor guard on main and its release branch.
 Installing workflows, changing settings/secrets, or running a writing rehearsal
 is a separate operation from preparing these files. Review exact outgoing
 repository/branch scope before performing it.
+
+## Complete fork release test
+
+The tested assessment alone does not publish drafts or releases. Complete these
+steps before requesting an all-three publishing rehearsal:
+
+1. Install reviewed worker/helpers and the fork-specific Dependabot configuration
+   on `main` in all three forks. Keep AI/controller workflows in the CLI fork.
+2. Seed `monthly-patch-test-main` and `monthly-patch-test-release-1.3` from the
+   current canonical stable sources, not old fork `main`. Consumers must track
+   existing immutable fork trial versions explicitly. The prepared fixtures
+   declare Go 1.26 and migrate the E2E signing plugin's JWT import to patched v4;
+   they do not waive its vulnerability scan. The fixtures also reuse the earlier
+   qualified trial's narrow Go-vet compatibility fixes: avoid copying `sync.Map`
+   in core tests, use supported error-format verbs in Go's plugin protocol, and
+   name CLI examples after real methods. Core's existing live timestamp test
+   derives the expected revoked subject from the validated response rather than
+   a hard-coded 2024 certificate name. No new runtime coverage is added.
+3. Install `notation-fork-ci.yml` and its qualification helpers on the isolated
+   branches. It runs source tests, race/vet/tidy, license and CVE gates against
+   the declared minimum Go and stable Go, including source CLI E2E. Its source
+   jobs receive no release secrets. Guard the inherited CLI tag publisher on
+   both isolated branches so it cannot race the monthly publisher.
+4. Enable fork issues and securely install the release token and signing key
+   described above. Set the common actor/signer variables and rehearsal flags.
+   Do not enable monthly scheduling yet.
+5. Use a local personal CLI login with access to secret metadata to run:
+
+   ```sh
+   env -u GH_TOKEN python3 .github/scripts/check_notation_fork_setup.py
+   ```
+
+   This reads names, not secret values, and reports all remaining setup blockers
+   in one pass. READY means environment prerequisites exist, not that dependency
+   compatibility or release qualification has been waived.
+6. Let real Dependabot PRs supply needed third-party fixes. For an all-three trial,
+   core needs a genuine dependency update. The controller never fabricates an
+   empty core patch simply to exercise the DAG. Missing fixes or failed checks
+   remain blockers; do not turn them into a success-shaped plan.
+7. Run a fresh assessment from CLI fork `main`. Preview its run ID with controller
+   `mode=dry-run`. Only after a complete release plan passes review, dispatch the
+   controller with `assessment_run=<ID>,mode=rehearse,approve=true`.
+8. Follow the persistent controller issue. Core publishes first; Go's producer PR
+   is created and checked before Go publishes; CLI follows the same process for
+   both planned libraries. Resume pending work manually or through the enabled
+   six-hour reconciliation. A failed worker needs explicit retry.
+
+Completion requires three signed public `*-monthly-test.YYYYMM` prereleases,
+the exact planned producer versions in every affected consumer module, verified
+source/asset manifests, successful downloaded-CLI native tests and Linux E2E,
+and a closed completed controller issue. Re-running the completed cycle must
+not create another release. Check failure/retry behavior before separately
+authorizing monthly schedule activation.
+
+Source coverage expansion remains deferred. The small JWT migration is required
+CVE remediation for the isolated test fixture, not a broader coverage project.
 
 ## Workflow qualification and shipped CLI checks
 
