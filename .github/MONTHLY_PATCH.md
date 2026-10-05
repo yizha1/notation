@@ -336,6 +336,9 @@ The CLI uses the trusted monthly GoReleaser config to build the same six
 archives plus checksum manifest as ordinary releases, retaining symbol tables
 without DWARF. Every binary's module/version/commit, architecture and hashes
 are checked and scanned before tags or releases become public.
+GoReleaser changelog generation is disabled: the worker writes release notes
+from the approved backport receipts and asset manifest instead. Fork packaging
+does not require the upstream stable baseline tag to exist in the fork.
 
 After publication, Linux AMD64, macOS ARM64 and Windows AMD64 jobs anonymously
 download the actual published bytes. They check the recorded asset
