@@ -32,6 +32,6 @@ require (
 	golang.org/x/sys v0.48.0 // indirect
 )
 
-replace github.com/notaryproject/notation-core-go => github.com/yizha1/notation-core-go v1.3.1-trial.4
+replace github.com/notaryproject/notation-core-go => github.com/yizha1/notation-core-go v1.3.2-monthly-test.202610
 
-replace github.com/notaryproject/notation-go => github.com/yizha1/notation-go v1.3.3-trial.2
+replace github.com/notaryproject/notation-go => github.com/yizha1/notation-go v1.3.4-monthly-test.202610
