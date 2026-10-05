@@ -19,7 +19,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/notaryproject/notation-core-go/signature"
 	"github.com/notaryproject/notation-go/plugin/proto"
 	"github.com/notaryproject/notation-plugin-framework-go/plugin"

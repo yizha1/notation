@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   build:
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    if: github.repository == 'notaryproject/notation' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository)
     name: Continuous Integration
     runs-on: ubuntu-latest
     strategy:
