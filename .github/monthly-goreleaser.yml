@@ -38,3 +38,5 @@ archives:
     files: [LICENSE]
 release:
   draft: true
+changelog:
+  disable: true
