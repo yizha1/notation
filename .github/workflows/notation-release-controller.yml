@@ -42,6 +42,10 @@ on:
         description: Explicitly replace stale assessed refs before tagging, retaining completed releases and reserved patch versions
         type: boolean
         default: false
+      recover_public_verification:
+        description: With assessment, approval and replan, update only verifier code for an unchanged public candidate
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -85,12 +89,14 @@ jobs:
           APPROVE: ${{ inputs.approve }}
           RETRY_FAILED: ${{ inputs.retry_failed }}
           REPLAN: ${{ inputs.replan }}
+          RECOVER_PUBLIC_VERIFICATION: ${{ inputs.recover_public_verification }}
         run: |
           args=()
           if [[ -n "$ASSESSMENT_RUN" ]]; then args+=(--assessment-run "$ASSESSMENT_RUN"); fi
           if [[ "$APPROVE" == true ]]; then args+=(--approve); fi
           if [[ "$RETRY_FAILED" == true ]]; then args+=(--retry-failed); fi
           if [[ "$REPLAN" == true ]]; then args+=(--replan); fi
+          if [[ "$RECOVER_PUBLIC_VERIFICATION" == true ]]; then args+=(--recover-public-verification); fi
           python3 .github/scripts/notation_release_controller.py control \
             --mode "$MODE" --output "$RUNNER_TEMP/controller" "${args[@]}"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
