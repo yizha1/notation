@@ -11,8 +11,8 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/sirupsen/logrus v1.10.2
 	github.com/spf13/cobra v1.10.2
-	github.com/spf13/pflag v1.0.9
-	golang.org/x/term v0.46.0
+	github.com/spf13/pflag v1.0.10
+	golang.org/x/term v0.47.0
 	oras.land/oras-go/v2 v2.6.2
 )
 
@@ -29,7 +29,7 @@ require (
 	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 )
 
 replace github.com/notaryproject/notation-core-go => github.com/yizha1/notation-core-go v1.3.2-monthly-test.202610
