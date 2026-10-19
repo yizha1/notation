@@ -76,11 +76,10 @@ def publish_pull(api, plan, expected, directory, environment, title):
                 f"Monthly patch `{plan['tag']}` for approved controller plan `{plan['controller_plan_id']}`.\n\n"
                 f"[Change logs](https://github.com/{repository}/compare/{plan['baseline']}...{expected['head_sha']})\n\n"
                 f"[Repo-level maintainers at the PR base](https://github.com/{repository}/blob/{expected['base_sha']}/MAINTAINERS)\n\n"
-                f"[Pinned assessed roster](https://github.com/{repository}/blob/{plan['maintainer_roster_sha']}/MAINTAINERS)\n\n"
                 "This PR preserves ordinary CI and branch reviews. "
-                + ("The separate release-voting PR requires a strict majority of repo-level "
-                   "maintainer approvals and a normal merge commit. "
-                   if repository != "notaryproject/notation-core-go" else
+                + (f"The fork owner must post `/approve-release {expected['head_sha']}` "
+                   "in the separate metadata release PR before its normal merge commit. "
+                   if repository != "yizha1/notation-core-go" else
                    "Core uses its reviewed dependency-only policy and normal merge commit, without an invented metadata vote. ")
                 +
                 "Approval does not authorize optional source fixes or features."
@@ -191,7 +190,9 @@ def advance(api, plan, directory, environment, cycle):
                     raise ValueError("Release version metadata is already present without this cycle's vote")
                 (worktree / path).write_text(updated, encoding="utf-8")
                 release.git(["add", "--", path], worktree)
-                release.git(["commit", "-S", "-m", f"bump: tag and release {plan['tag']}"], worktree, environment)
+                vote_environment = {**environment, "GIT_AUTHOR_DATE": plan["started_at"],
+                                    "GIT_COMMITTER_DATE": plan["started_at"]}
+                release.git(["commit", "-S", "-m", f"bump: tag and release {plan['tag']}"], worktree, vote_environment)
                 head = release.git(["rev-parse", "HEAD"], worktree)
                 tree = release.git(["rev-parse", "HEAD^{tree}"], worktree)
                 vote = {
@@ -209,8 +210,8 @@ def advance(api, plan, directory, environment, cycle):
                 release.git(["worktree", "remove", str(worktree)], directory)
     vote = plan["release_vote"]
     pull = api.request(f"repos/{repository}/pulls/{vote['number']}")
-    reviews = list(api.pages(f"repos/{repository}/pulls/{vote['number']}/reviews"))
-    roster = content(api, repository, "MAINTAINERS", vote["maintainer_roster_sha"])
+    reviews = list(api.pages(f"repos/{repository}/issues/{vote['number']}/comments"))
+    roster = ""
     compare = api.request(f"repos/{repository}/compare/{vote['candidate_sha']}...{vote['head_sha']}")
     if compare.get("status") != "ahead" or compare.get("ahead_by") != 1 or compare.get("behind_by") != 0:
         raise ValueError("Release vote must contain exactly one metadata commit")

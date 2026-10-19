@@ -215,8 +215,8 @@ class MonthlyReleaseCheckTests(unittest.TestCase):
         self.assertNotIn("dependency-patch-upstream", content)
         self.assertNotIn("--reconcile", content)
         self.assertIn("MONTHLY_PATCH_COORDINATOR_REQUIRED: 'true'", content)
-        self.assertIn("monthly_release.py notify-controller", content)
-        self.assertIn("--cycle-id", content)
+        self.assertIn("controller.failure(", content)
+        self.assertIn("MONTHLY_PATCH_FORK_MANUAL_ENABLED", content)
 
 
 if __name__ == "__main__":

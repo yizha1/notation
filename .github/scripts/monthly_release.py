@@ -36,8 +36,8 @@ PROJECTS = {
 STABLE = re.compile(r"v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
 SHA = re.compile(r"[0-9a-f]{40}$")
 MONTH = re.compile(r"\d{4}-(0[1-9]|1[0-2])$")
-CYCLE = re.compile(r"monthly|upstream-[0-9a-f]{64}$")
-REPOSITORY = re.compile(r"notaryproject/(notation-core-go|notation-go|notation)$")
+CYCLE = re.compile(r"manual-review-20261018$")
+REPOSITORY = re.compile(r"yizha1/(notation-core-go|notation-go|notation)$")
 FINAL = {"published", "skipped"}
 
 
@@ -139,40 +139,33 @@ class GitHub:
 
 
 def trusted_editor(api, repository, issue):
-    if repository.startswith("notaryproject/") and os.environ.get("GITHUB_REPOSITORY", "").startswith("notaryproject/"):
-        editor = api.issue_editor(repository, issue["number"])
-        if editor is not None and editor != os.environ.get("MONTHLY_PATCH_ACTOR"):
-            raise ValueError("Release state was edited outside the configured actor")
+    if not REPOSITORY.fullmatch(repository):
+        raise ValueError("Release record escapes the explicit fork namespace")
+    editor = api.issue_editor(repository, issue["number"])
+    if editor is not None and editor != "yizha1":
+        raise ValueError("Release state was edited outside the trial owner")
 
 
 def semver(tag):
-    match = STABLE.fullmatch(tag)
+    match = re.fullmatch(r"v(1)\.(3)\.(0|[1-9]\d*)(?:-monthly-test\.202610|-manual-review\.20261018)", tag)
     return tuple(map(int, match.groups())) if match else None
 
 
-def latest_release(releases):
-    eligible = [
-        item for item in releases
-        if not item["draft"] and not item["prerelease"] and semver(item["tag_name"])
-    ]
-    if not eligible:
-        raise ValueError("No published stable release; a reviewed baseline is required")
-    return max(eligible, key=lambda item: semver(item["tag_name"]))
 
 
 def modules(repository):
     return (".", "test/e2e", "test/e2e/plugin") if repository.split("/")[1] == "notation" else (".",)
 
 
-def cycle_marker(month, mode, cycle_id="monthly"):
+def cycle_marker(month, mode, cycle_id="manual-review-20261018"):
     if not MONTH.fullmatch(month) or mode != "execute" or not CYCLE.fullmatch(cycle_id):
         raise ValueError("Invalid cycle identity")
-    suffix = "" if cycle_id == "monthly" else f":{cycle_id}"
+    suffix = "" if cycle_id == "manual-review-20261018" else f":{cycle_id}"
     return f"<!-- dependency-patch:{month}:{mode}{suffix} -->"
 
 
 def plan_marker(plan):
-    return cycle_marker(plan["month"], plan["mode"], plan.get("cycle_id", "monthly"))
+    return cycle_marker(plan["month"], plan["mode"], plan.get("cycle_id", "manual-review-20261018"))
 
 
 def policy(repository, mode, environment, metadata):
@@ -180,13 +173,8 @@ def policy(repository, mode, environment, metadata):
         raise ValueError("Unsupported repository or mode")
     if mode == "dry-run":
         return
-    if mode == "execute":
-        if repository.split("/")[0] != "notaryproject":
-            raise ValueError("Stable execution is restricted to the canonical repositories")
-        if environment.get("MONTHLY_PATCH_ENABLED") != "true":
-            raise ValueError("Monthly production execution is not enabled")
-        if environment.get("GITHUB_REF") != "refs/heads/main" or metadata["default_branch"] != "main":
-            raise ValueError("Production orchestration must run from the trusted default main")
+    from notation_release_controller import invocation
+    invocation(GitHub(), repository)
     for key in ("MONTHLY_PATCH_TOKEN_READY", "MONTHLY_PATCH_SIGNING_KEY",
                 "MONTHLY_PATCH_SIGNER_EMAIL", "MONTHLY_PATCH_SIGNER_LOGIN", "MONTHLY_PATCH_ACTOR"):
         if not environment.get(key) or (key.endswith("READY") and environment[key] != "true"):
@@ -246,13 +234,14 @@ def requirement(manifest, module, producer_repository, mode):
         if item["Old"]["Path"] == module and item["Old"].get("Version", "") in ("", version)
     ]
     if mode == "execute":
-        if manifest.get("Replace"):
-            raise ValueError("Production release manifests must not contain trial replacements")
-        return version
+        if (len(replacements) != 1 or replacements[0]["New"].get("Path") != f"github.com/{producer_repository}"
+                or not replacements[0]["New"].get("Version")):
+            raise ValueError("Missing exact reviewed fork producer replacement")
+        return replacements[0]["New"]["Version"]
     return replacements[0]["New"].get("Version", "") if replacements else version
 
 
-def decode_state(body, repository, month, mode, cycle_id="monthly"):
+def decode_state(body, repository, month, mode, cycle_id="manual-review-20261018"):
     marker = cycle_marker(month, mode, cycle_id)
     if marker not in (body or ""):
         return None
@@ -269,7 +258,7 @@ def decode_state(body, repository, month, mode, cycle_id="monthly"):
     state = json.loads(blocks[0], object_pairs_hook=unique)
     if state.get("schema") != 1 or state.get("repository") != repository:
         raise ValueError("Cycle state belongs to another repository or schema")
-    if state.get("month") != month or state.get("mode") != mode or state.get("cycle_id", "monthly") != cycle_id:
+    if state.get("month") != month or state.get("mode") != mode or state.get("cycle_id", "manual-review-20261018") != cycle_id:
         raise ValueError("Cycle state identity changed")
     if state.get("status") not in {"merging", "waiting", "voting", "ready", "tagged", "staging", "draft",
                                   "awaiting-publication", "verifying", "failed", *FINAL}:
@@ -278,9 +267,9 @@ def decode_state(body, repository, month, mode, cycle_id="monthly"):
     if baseline is None:
         raise ValueError("Cycle has no stable baseline")
     major, minor, patch = baseline
-    expected_branch = f"release-{major}.{minor}"
-    expected_main = "main"
-    if state.get("tag") != f"v{major}.{minor}.{patch + 1}":
+    expected_branch = "monthly-patch-test-release-1.3"
+    expected_main = "monthly-patch-test-main"
+    if state.get("tag") != f"v{major}.{minor}.{patch + 1}-manual-review.20261018":
         raise ValueError("Patch tag does not increment the stable baseline")
     if state.get("branch") != expected_branch or state.get("main") != expected_main:
         raise ValueError("Cycle branches escape the approved execution namespace")
@@ -296,7 +285,7 @@ def validate_plan(plan):
     if not REPOSITORY.fullmatch(repository):
         raise ValueError("Invalid plan repository")
     body = plan_marker(plan) + "\n```json\n" + json.dumps(plan) + "\n```"
-    return decode_state(body, repository, month, mode, plan.get("cycle_id", "monthly"))
+    return decode_state(body, repository, month, mode, plan.get("cycle_id", "manual-review-20261018"))
 
 
 def resume_cycle(api, repository, month, mode):
@@ -306,10 +295,10 @@ def resume_cycle(api, repository, month, mode):
             continue
         if issue.get("user", {}).get("login") != os.environ.get("MONTHLY_PATCH_ACTOR"):
             continue
-        for previous, suffix in re.findall(rf"<!-- dependency-patch:(\d{{4}}-(?:0[1-9]|1[0-2])):{mode}(?::(upstream-[0-9a-f]{{64}}))? -->", issue.get("body") or ""):
+        for previous, suffix in re.findall(rf"<!-- dependency-patch:(2026-10):{mode}:(manual-review-20261018) -->", issue.get("body") or ""):
             if previous > month:
                 raise ValueError("A future monthly cycle requires reconciliation")
-            cycle_id = suffix or "monthly"
+            cycle_id = suffix or "manual-review-20261018"
             state = decode_state(issue["body"], repository, previous, mode, cycle_id)
             if state["status"] not in FINAL:
                 if issue.get("user", {}).get("login") != os.environ.get("MONTHLY_PATCH_ACTOR"):
@@ -321,7 +310,7 @@ def resume_cycle(api, repository, month, mode):
 
 
 class Cycle:
-    def __init__(self, api, repository, month, mode, cycle_id="monthly"):
+    def __init__(self, api, repository, month, mode, cycle_id="manual-review-20261018"):
         self.api, self.repository, self.month, self.mode = api, repository, month, mode
         self.cycle_id = cycle_id
         self.issue = None
@@ -345,7 +334,7 @@ class Cycle:
 
     def save(self, state):
         validate_plan(state)
-        if (state["repository"], state["month"], state["mode"], state.get("cycle_id", "monthly")) != (self.repository, self.month, self.mode, self.cycle_id):
+        if (state["repository"], state["month"], state["mode"], state.get("cycle_id", "manual-review-20261018")) != (self.repository, self.month, self.mode, self.cycle_id):
             raise ValueError("Cycle write changed its identity")
         title = f"Dependency patch: {self.month} ({self.mode}, {self.cycle_id})"
         body = (
@@ -368,35 +357,6 @@ class Cycle:
         self.state = state
 
 
-def producer_versions(api, repository, mode):
-    owner, project = repository.split("/")
-    ready = {}
-    for producer in PROJECTS[project]:
-        target = f"notaryproject/{producer}"
-        releases = list(api.pages(f"repos/{target}/releases"))
-        candidates = []
-        for item in releases:
-            if item["draft"] or item["prerelease"]:
-                continue
-            version = semver(item["tag_name"])
-            if version is None:
-                continue
-            candidates.append((version, item))
-        selected = None
-        for _, item in sorted(candidates, key=lambda pair: pair[0], reverse=True):
-            marker = re.search(r"<!-- dependency-patch:(\d{4}-\d{2}):(execute)(?::(upstream-[0-9a-f]{64}))? -->", item.get("body") or "")
-            if marker:
-                cycle = Cycle(api, target, marker[1], marker[2], marker[3] or "monthly")
-                state = cycle.state
-                if not state or state["status"] != "published" or state["tag"] != item["tag_name"]:
-                    continue
-                assert_tag(api, state)
-            selected = item
-            break
-        if selected is None:
-            raise ValueError(f"No usable public stable producer release: {target}")
-        ready[producer] = {"repository": target, "version": selected["tag_name"]}
-    return ready
 
 
 def includes_version(actual, expected):
@@ -426,26 +386,8 @@ def producer_lag_from_manifests(repository, manifests, mode, producers, at_least
     return lag
 
 
-def upstream_cycle_id(producers):
-    versions = {name: {key: item[key] for key in ("repository", "version")} for name, item in producers.items()}
-    digest = hashlib.sha256(json.dumps(versions, sort_keys=True).encode()).hexdigest()
-    return f"upstream-{digest}"
 
 
-def pending_notification(api, repository, mode):
-    owner, producer = repository.split("/")
-    targets = {f"{owner}/{name}" for name, dependencies in PROJECTS.items() if producer in dependencies}
-    if not targets:
-        return None
-    pending = []
-    for issue in api.pages(f"repos/{repository}/issues?state=all"):
-        if "pull_request" in issue or issue.get("user", {}).get("login") != os.environ.get("MONTHLY_PATCH_ACTOR"):
-            continue
-        for month, suffix in re.findall(rf"<!-- dependency-patch:(\d{{4}}-\d{{2}}):{mode}(?::(upstream-[0-9a-f]{{64}}))? -->", issue.get("body") or ""):
-            state = decode_state(issue["body"], repository, month, mode, suffix or "monthly")
-            if state["status"] == "published" and targets - set(state.get("notified", [])):
-                pending.append(state)
-    return min(pending, key=lambda state: (state["month"], state["tag"])) if pending else None
 
 
 def verified_tag(api, repository, tag, commit):
@@ -464,7 +406,7 @@ def check_release_assets(api, plan, draft):
         raise ValueError("Release manifest has no recorded release ID")
     release = api.request(f"repos/{plan['repository']}/releases/{identifier}")
     if (release.get("id") != identifier or release.get("tag_name") != plan["tag"]
-            or release.get("draft") is not draft or release.get("prerelease") is not False):
+            or release.get("draft") is not draft or release.get("prerelease") is not True):
         raise ValueError("Release visibility or stable/prerelease identity changed")
     if plan_marker(plan) not in (release.get("body") or "") or plan["commit"] not in release["body"]:
         raise ValueError("Release does not identify the qualified cycle")
@@ -494,7 +436,7 @@ def check_public_assets(api, plan):
 def draft_review_body(plan):
     from notation_release_controller import safe_title
     record = {key: plan[key] for key in ("repository", "month", "tag", "commit", "release_id",
-                                        "assets", "draft_verification", "controller_issue")}
+                                        "assets", "draft_verification", "controller_issue", "draft_html_url", "qualification")}
     record["controller_plan_id"] = plan.get("draft_plan_id", plan["controller_plan_id"])
     marker = f"<!-- monthly-release-review:{plan['repository']}:{plan['month']}:{plan['tag']} -->"
     scope = ["## Actual release commits", "",
@@ -511,13 +453,13 @@ def draft_review_body(plan):
     scope.append(f"| Normal stable-branch merge tip | Preserved branch lease | `{plan['previous_head']}` |")
     return (
         f"{marker}\n# Qualified draft release review\n\n"
-        f"Review [{plan['tag']} draft](https://github.com/{plan['repository']}/releases/tag/{plan['tag']}) "
+        f"Review [{plan['tag']} draft]({plan['draft_html_url']}) "
         f"(release ID {plan['release_id']}). Source, scan, packaged-asset, and downloaded-draft native "
         "checks passed for the exact candidate and recorded bytes below.\n\n"
-        f"Plan: https://github.com/notaryproject/notation/issues/{plan['controller_issue']}\n\n"
+        f"Plan: https://github.com/yizha1/notation/issues/{plan['controller_issue']}\n\n"
         "**Maintainer action:** inspect the draft release, all assets, hashes, and retained evidence. "
         "In GitHub Releases, open this exact draft, choose Edit, and choose Publish release "
-        "without changing its tag, commit, assets, or stable release identity. "
+        "without changing its tag, commit, assets, or fork prerelease identity. "
         "Do not publish if any check or evidence is missing. Closing this issue or commenting "
         "does not publish or authorize the bot to publish. Only a maintainer publishes in this phase. "
         "Automation will verify the same release ID and bytes anonymously after publication "
@@ -585,18 +527,20 @@ def git(command, directory, environment=None):
 
 
 def baseline_plan(api, repository, month, mode, state=None):
-    source = repository
-    baseline = latest_release(list(api.pages(f"repos/{source}/releases")))
-    major, minor, patch = semver(baseline["tag_name"])
-    branch = f"release-{major}.{minor}"
-    tag = f"v{major}.{minor}.{patch + 1}"
-    if state and state["baseline"] != baseline["tag_name"]:
-        raise ValueError("Stable baseline advanced during the cycle; replan before any release")
+    from notation_release_controller import approved_plan, snapshot_for
+    approved = approved_plan(api)
+    snapshot = snapshot_for(approved, repository)
+    baseline = api.request(f"repos/{repository}/releases/{snapshot['baseline_release_id']}")
+    if baseline.get("draft") is not False or baseline.get("tag_name") != snapshot["baseline"]:
+        raise ValueError("Approved public fork baseline changed")
+    verified_tag(api, repository, snapshot["baseline"], snapshot["baseline_sha"])
+    if state and any(state[key] != snapshot[key] for key in ("baseline", "main", "branch", "tag")):
+        raise ValueError("Reserved fork version or source namespace changed")
     return {
         "schema": 1, "repository": repository, "month": month, "mode": mode,
-        "baseline": baseline["tag_name"], "baseline_published": baseline["published_at"],
-        "branch": branch, "main": "main",
-        "tag": tag, "status": "merging", "merged": [],
+        "baseline": snapshot["baseline"], "baseline_published": baseline["published_at"],
+        "branch": snapshot["branch"], "main": snapshot["main"],
+        "tag": snapshot["tag"], "status": "merging", "merged": [],
         "started_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
     }
 
@@ -640,9 +584,8 @@ def check_publisher_guard(api, repository, branch):
     if workflow.get("encoding") != "base64":
         raise ValueError("Cannot inspect the release branch's existing tag publisher")
     content = base64.b64decode(workflow["content"]).decode("utf-8")
-    guard = "    if: github.repository == 'notaryproject/notation' && github.actor != vars.MONTHLY_PATCH_ACTOR"
-    if guard not in content.splitlines():
-        raise ValueError("Install the monthly automation-actor guard in release-github.yml on the release branch before enabling monthly publication")
+    if "github.repository == 'notaryproject/notation'" not in content:
+        raise ValueError("Existing tag publisher is not restricted to canonical CLI; review exclusion before dispatch")
 
 
 def coordinator_authorization(api, repository, mode, month, plan=None, allow_previous=False, notification=False):
@@ -666,9 +609,9 @@ def prepare(api, repository, mode, month, directory, output, start=False, reconc
     authorization = coordinator_authorization(api, repository, mode, month)
     effective_mode = "execute"
     active = resume_cycle(api, repository, month, effective_mode)
-    if authorization and active and active != (month, "monthly"):
+    if authorization and active and active != (month, "manual-review-20261018"):
         raise ValueError("Another release cycle is active; coordinator authorization cannot replace it")
-    cycle_id = "monthly"
+    cycle_id = "manual-review-20261018"
     if active:
         month, cycle_id = active
     cycle = Cycle(api, repository, month, effective_mode, cycle_id)
@@ -688,27 +631,11 @@ def prepare(api, repository, mode, month, directory, output, start=False, reconc
                     vote["maintainer_roster_sha"] = roster
                 cycle.state["maintainer_roster_sha"] = roster
             cycle.save(cycle.state)
-    discovered = None
-    if not active and reconcile and mode != "dry-run":
-        pending = pending_notification(api, repository, effective_mode)
-        if pending:
-            return {**pending, "action": "complete"}
-    if not active and reconcile and (mode != "dry-run" or cycle.state) and (not start or (cycle.state and cycle.state["status"] in FINAL)):
-        discovered = producer_versions(api, repository, effective_mode)
-        baseline = baseline_plan(api, repository, month, mode)
-        ref = baseline["baseline"]
-        if producer_lag(api, repository, ref, effective_mode, discovered, at_least=True):
-            cycle_id = upstream_cycle_id(discovered)
-            cycle = Cycle(api, repository, month, effective_mode, cycle_id)
-            if cycle.state and cycle.state["status"] in FINAL:
-                raise ValueError("Completed upstream cycle is missing from the current release; reconcile before publishing")
-        elif not cycle.state:
-            return {"action": "idle", "reason": "No active cycle or unconsumed public producer release"}
     if mode == "dry-run" and cycle.state:
         return {**cycle.state, "action": "preview", "writes": False}
     if cycle.state and cycle.state["status"] in FINAL:
         return {**cycle.state, "action": "complete"}
-    if mode != "dry-run" and not cycle.state and not start and cycle_id == "monthly":
+    if mode != "dry-run" and not cycle.state and not start and cycle_id == "manual-review-20261018":
         return {"action": "idle", "reason": "No active monthly cycle to resume"}
     if mode == "execute" and authorization and cycle.state and cycle.state["status"] == "voting":
         from monthly_release_pr import advance
@@ -763,14 +690,16 @@ def prepare(api, repository, mode, month, directory, output, start=False, reconc
         raise ValueError("Assessed source refs changed before worker execution")
     if mode == "execute":
         check_publisher_guard(api, repository, state["branch"])
-    producers = (authorization["producers"] if authorization else
-                 discovered if discovered is not None else producer_versions(api, repository, effective_mode))
+    if authorization is None:
+        raise ValueError("Fork execution requires the exact approved plan")
+    producers = authorization["producers"]
     state["producers"] = producers
     def eligible(pull):
         if dependabot(pull, state["main"]):
             return True
         if authorization:
-            return False
+            from notation_release_controller import fork_propagation_pull
+            return fork_propagation_pull(api, repository, pull, authorization)
         return False
     open_pulls = sorted([item for item in api.pulls(repository, state["main"], "open") if eligible(item)],
                         key=lambda item: item["number"])
@@ -791,6 +720,7 @@ def prepare(api, repository, mode, month, directory, output, start=False, reconc
         cycle.save(state)
         blocked = []
         for initial in open_pulls:
+            coordinator_authorization(api, repository, mode, month, state)
             pull = api.request(f"repos/{repository}/pulls/{initial['number']}")
             if not eligible(pull) or pull.get("state") != "open":
                 raise ValueError("PR identity changed after discovery; retry from a fresh inventory")
@@ -827,7 +757,7 @@ def prepare(api, repository, mode, month, directory, output, start=False, reconc
                 if scoped_pull(api, repository, api.request(f"repos/{repository}/pulls/{item['number']}"), authorization, state["merged"])
             ]
         if not merged_pulls:
-            if cycle_id != "monthly":
+            if cycle_id != "manual-review-20261018":
                 raise ValueError("Required producer update has no merged Dependabot backport provenance")
             state.update(status="skipped", reason="No merged dependency PRs")
             cycle.save(state)
@@ -876,7 +806,7 @@ def prepare(api, repository, mode, month, directory, output, start=False, reconc
             else:
                 backports.append({**item, "backport_commit": git(["rev-parse", "HEAD"], worktree)})
         candidate = git(["rev-parse", "HEAD"], worktree)
-        if candidate == expected and cycle_id == "monthly":
+        if candidate == expected and cycle_id == "manual-review-20261018":
             state.update(status="skipped", reason="All dependency updates are already on the release branch")
             cycle.save(state)
             return {**state, "action": "complete"}
@@ -885,8 +815,6 @@ def prepare(api, repository, mode, month, directory, output, start=False, reconc
             commit=candidate,
         )
         root_manifest = json.loads(run(["go", "mod", "edit", "-json"], cwd=worktree))
-        if mode == "execute" and root_manifest.get("Replace"):
-            raise ValueError("Production release manifests must not contain trial replacements")
         if not re.fullmatch(r"\d+\.\d+(?:\.\d+)?", root_manifest["Go"]):
             raise ValueError("Unsupported minimum Go version")
         state["minimum_go"] = ".".join(root_manifest["Go"].split(".")[:2])
@@ -931,7 +859,7 @@ def stage_tag(api, plan, directory):
     if plan["status"] != "ready":
         raise ValueError("Only a qualified ready candidate can be tagged")
     repository = plan["repository"]
-    cycle = Cycle(api, repository, plan["month"], plan["mode"], plan.get("cycle_id", "monthly"))
+    cycle = Cycle(api, repository, plan["month"], plan["mode"], plan.get("cycle_id", "manual-review-20261018"))
     if not cycle.state or cycle.state.get("commit") != plan["commit"]:
         raise ValueError("Prepared cycle state changed before publication")
     if cycle.state["status"] != "ready" or cycle.state["tag"] != plan["tag"] or cycle.state["previous_head"] != plan["previous_head"]:
@@ -956,7 +884,7 @@ def tag_candidate(api, plan, directory):
         from monthly_release_pr import validate
         validate(api, plan)
     repository = plan["repository"]
-    cycle = Cycle(api, repository, plan["month"], plan["mode"], plan.get("cycle_id", "monthly"))
+    cycle = Cycle(api, repository, plan["month"], plan["mode"], plan.get("cycle_id", "manual-review-20261018"))
     if not cycle.state or any(cycle.state.get(key) != plan.get(key) for key in ("commit", "tag", "previous_head", "status")) or plan["status"] != "ready":
         raise ValueError("Qualified cycle changed before remote tagging")
     baseline_plan(api, repository, plan["month"], plan["mode"], plan)
@@ -965,6 +893,16 @@ def tag_candidate(api, plan, directory):
     if git(["rev-parse", f"{plan['tag']}^{{commit}}"], directory) != plan["commit"]:
         raise ValueError("Local release tag does not identify the qualified commit")
     ref = api.optional(f"repos/{repository}/git/ref/tags/{plan['tag']}")
+    run_id = os.environ.get("GITHUB_RUN_ID", "")
+    if not run_id.isdecimal() or int(run_id) <= 0:
+        raise ValueError("Tagging requires the successful qualification run identity")
+    plan["qualification"] = {
+        "run_id": int(run_id), "worker_sha": os.environ["MONTHLY_PATCH_WORKER_SHA"],
+        "commit": plan["commit"],
+        "evidence": f"https://github.com/{repository}/actions/runs/{run_id}",
+        "artifacts": ["monthly-source-*", "monthly-build-evidence"],
+    }
+    cycle.save(plan)
     if ref:
         assert_tag(api, plan)
     else:
@@ -993,10 +931,15 @@ def publish(api, plan, directory):
         from monthly_release_pr import validate
         validate(api, plan)
     assert_tag(api, plan)
-    cycle = Cycle(api, plan["repository"], plan["month"], plan["mode"], plan.get("cycle_id", "monthly"))
+    cycle = Cycle(api, plan["repository"], plan["month"], plan["mode"], plan.get("cycle_id", "manual-review-20261018"))
     if (not cycle.state or cycle.state["status"] not in {"tagged", "staging"}
             or any(cycle.state.get(key) != plan.get(key) for key in ("commit", "tag", "previous_head"))):
         raise ValueError("Cycle changed before recording draft release")
+    qualification = cycle.state.get("qualification", {})
+    if (qualification != plan.get("qualification") or qualification.get("commit") != plan["commit"]
+            or type(qualification.get("run_id")) is not int or qualification["run_id"] <= 0
+            or not SHA.fullmatch(qualification.get("worker_sha", ""))):
+        raise ValueError("Draft staging has no recorded source/package qualification run")
     assets = []
     for path in sorted(pathlib.Path(directory).iterdir()):
         if path.is_file() and (path.name.endswith((".tar.gz", ".zip", "checksums.txt"))):
@@ -1024,7 +967,7 @@ def publish(api, plan, directory):
             raise ValueError("Retry must retain the exact originally staged asset bytes")
         existing = api.request(f"repos/{plan['repository']}/releases/{plan['release_id']}")
         if (existing.get("id") != plan["release_id"] or existing.get("draft") is not True
-                or existing.get("prerelease") is not False or existing.get("tag_name") != plan["tag"]
+                or existing.get("prerelease") is not True or existing.get("tag_name") != plan["tag"]
                 or existing.get("body") != notes):
             raise ValueError("Recorded draft identity or qualification manifest changed")
     else:
@@ -1032,12 +975,14 @@ def publish(api, plan, directory):
             raise ValueError("Unrecorded existing release requires reconciliation; never adopt or replace it")
         existing = api.request(f"repos/{plan['repository']}/releases", "POST", {
             "tag_name": plan["tag"], "target_commitish": plan["commit"], "name": plan["tag"],
-            "body": notes, "draft": True, "prerelease": False, "make_latest": "false",
+            "body": notes, "draft": True, "prerelease": True, "make_latest": "false",
         })
         identifier = existing.get("id")
-        if type(identifier) is not int or identifier <= 0 or existing.get("draft") is not True:
+        url = existing.get("html_url", "")
+        if (type(identifier) is not int or identifier <= 0 or existing.get("draft") is not True
+                or not re.fullmatch(rf"https://github\.com/{re.escape(plan['repository'])}/releases/tag/[A-Za-z0-9_.-]+", url)):
             raise ValueError("Draft creation was not confirmed")
-        plan.update(status="staging", release_id=identifier, assets=assets)
+        plan.update(status="staging", release_id=identifier, draft_html_url=url, assets=assets)
         cycle.save(plan)
     remote = list(api.pages(f"repos/{plan['repository']}/releases/{plan['release_id']}/assets"))
     if len({item["name"] for item in remote}) != len(remote) or any(item["name"] not in {a["name"] for a in assets} for item in remote):
@@ -1067,7 +1012,7 @@ def complete(api, plan):
     validate_plan(plan)
     policy(plan["repository"], plan["mode"], os.environ, api.request(f"repos/{plan['repository']}"))
     coordinator_authorization(api, plan["repository"], plan["mode"], plan["month"], plan)
-    cycle = Cycle(api, plan["repository"], plan["month"], plan["mode"], plan.get("cycle_id", "monthly"))
+    cycle = Cycle(api, plan["repository"], plan["month"], plan["mode"], plan.get("cycle_id", "manual-review-20261018"))
     if (not cycle.state or cycle.state["status"] not in {"draft", "verifying"}
             or any(cycle.state.get(key) != plan.get(key) for key in ("status", "commit", "tag", "release_id", "assets"))):
         raise ValueError("No matching draft/public release awaiting successful verification")
@@ -1108,69 +1053,21 @@ def complete(api, plan):
         cycle.save(plan)
         return {**plan, "action": "waiting"}
     check_public_assets(api, plan)
+    plan["public_verification_run"] = int(os.environ["GITHUB_RUN_ID"])
     plan.update(status="published", reason="Source, artifacts, and public downloaded-package checks passed")
     cycle.save(plan)
     return {**plan, "action": "complete"}
 
 
-def dispatch_consumers(api, repository, mode, tag, notified=None):
-    owner, producer = repository.split("/")
-    consumers = [f"{owner}/{name}" for name, dependencies in PROJECTS.items() if producer in dependencies]
-    notified = list(notified or [])
-    if len(set(notified)) != len(notified) or any(target not in consumers for target in notified):
-        raise ValueError("Invalid downstream notification progress")
-    for target in consumers:
-        if target in notified:
-            continue
-        api.request(f"repos/{target}/dispatches", "POST", {
-            "event_type": "dependency-patch-upstream",
-            "client_payload": {"producer": repository, "tag": tag, "mode": mode},
-        })
-        notified.append(target)
-        yield list(notified)
 
 
-def notify(api, plan):
-    validate_plan(plan)
-    policy(plan["repository"], plan["mode"], os.environ, api.request(f"repos/{plan['repository']}"))
-    cycle = Cycle(api, plan["repository"], plan["month"], plan["mode"], plan.get("cycle_id", "monthly"))
-    if not cycle.state or cycle.state["status"] != "published" or any(cycle.state.get(key) != plan.get(key) for key in ("tag", "commit")):
-        raise ValueError("Only a successfully verified public cycle can notify consumers")
-    assert_tag(api, cycle.state)
-    check_public_assets(api, cycle.state)
-    for notified in dispatch_consumers(api, plan["repository"], plan["mode"], plan["tag"], cycle.state.get("notified")):
-        cycle.state["notified"] = notified
-        cycle.save(cycle.state)
-    return {**cycle.state, "action": "complete"}
 
 
-def announce(api, repository, mode, tag):
-    if not REPOSITORY.fullmatch(repository) or mode != "execute":
-        raise ValueError("Invalid release notification repository or mode")
-    metadata = api.request(f"repos/{repository}")
-    if mode == "execute":
-        if repository.split("/")[0] != "notaryproject" or os.environ.get("MONTHLY_PATCH_ENABLED") != "true":
-            raise ValueError("Canonical release notifications are not enabled")
-    if os.environ.get("MONTHLY_PATCH_TOKEN_READY") != "true" or not os.environ.get("MONTHLY_PATCH_ACTOR"):
-        raise ValueError("Release notifications require the configured automation credential")
-    if os.environ.get("GITHUB_REF") != f"refs/tags/{tag}":
-        raise ValueError("Release notification must identify the triggering public tag")
-    release = api.request(f"repos/{repository}/releases/tags/{tag}")
-    if release["draft"] or release["tag_name"] != tag:
-        raise ValueError("Release notification does not identify a public release")
-    if "<!-- dependency-patch:" in (release.get("body") or ""):
-        return {"action": "idle", "reason": "Automated release notification waits for successful package verification"}
-    if mode != "execute" or release["prerelease"] or semver(tag) is None:
-        return {"action": "idle", "reason": "Only ordinary stable releases need a publication notification"}
-    notified = []
-    for notified in dispatch_consumers(api, repository, mode, tag):
-        pass
-    return {"action": "notified", "repository": repository, "tag": tag, "notified": notified}
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["prepare", "import", "stage-tag", "tag", "publish", "complete", "notify", "notify-controller", "announce", "failure"])
+    parser.add_argument("command", choices=["prepare", "import", "stage-tag", "tag", "publish", "complete", "failure"])
     parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY", ""))
     parser.add_argument("--mode", choices=["dry-run", "execute"], default="dry-run")
     parser.add_argument("--month", default=datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m"))
@@ -1180,7 +1077,7 @@ def main():
     parser.add_argument("--bundle", type=pathlib.Path)
     parser.add_argument("--start", action="store_true")
     parser.add_argument("--reconcile", action="store_true")
-    parser.add_argument("--cycle-id", default="monthly")
+    parser.add_argument("--cycle-id", default="manual-review-20261018")
     parser.add_argument("--tag")
     parser.add_argument("--reason", default="Workflow failed. Inspect its retained evidence and logs before retrying.")
     args = parser.parse_args()
@@ -1199,18 +1096,6 @@ def main():
             return 0
         if args.command == "prepare":
             result = prepare(api, args.repository, args.mode, args.month, args.directory, args.output, args.start, args.reconcile)
-        elif args.command == "announce":
-            result = announce(api, args.repository, args.mode, args.tag)
-        elif args.command == "notify-controller":
-            authorization = coordinator_authorization(api, args.repository, args.mode, args.month, notification=True)
-            if authorization is None:
-                raise ValueError("Controller notification requires a dispatched coordinator worker")
-            from notation_release_controller import HOST
-            api.request(f"repos/{HOST}/dispatches", "POST", {
-                "event_type": "notation-release-progress",
-                "client_payload": {"controller_issue": authorization["issue"], "plan_id": authorization["plan_id"]},
-            })
-            result = {"action": "notified", "controller_issue": authorization["issue"]}
         else:
             if args.plan is None:
                 raise ValueError("An inspected candidate plan is required")
@@ -1228,8 +1113,6 @@ def main():
                 result = stage_tag(api, plan, args.directory)
             elif args.command == "publish":
                 result = publish(api, plan, args.directory)
-            elif args.command == "notify":
-                result = notify(api, plan)
             else:
                 result = complete(api, plan)
         (args.output / "plan.json").write_text(json.dumps(result, indent=2) + "\n")

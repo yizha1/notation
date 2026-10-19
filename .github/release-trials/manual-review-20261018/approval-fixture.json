@@ -1,0 +1,57 @@
+{
+  "issue": {
+    "number": 26,
+    "user": {
+      "login": "yizha1",
+      "id": 107919912,
+      "node_id": "U_kgDOBm66KA",
+      "avatar_url": "https://avatars.githubusercontent.com/u/107919912?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/yizha1",
+      "html_url": "https://github.com/yizha1",
+      "followers_url": "https://api.github.com/users/yizha1/followers",
+      "following_url": "https://api.github.com/users/yizha1/following{/other_user}",
+      "gists_url": "https://api.github.com/users/yizha1/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/yizha1/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/yizha1/subscriptions",
+      "organizations_url": "https://api.github.com/users/yizha1/orgs",
+      "repos_url": "https://api.github.com/users/yizha1/repos",
+      "events_url": "https://api.github.com/users/yizha1/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/yizha1/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "state": "open",
+    "body": "# October 2026 patch-release trial\n\nThis plan covers the three `yizha1` forks.\n\n## notation-core-go\n\nCurrent: `v1.3.2-monthly-test.202610`  \nProposed: `v1.3.3-manual-review.20261018`\n\n- [CBOR: 2.9.4 to 2.9.6; x/crypto: 0.57.0 to 0.58.0](https://github.com/yizha1/notation-core-go/pull/17).\n- [actions/upload-artifact: 7.0.1 to 7.0.2](https://github.com/yizha1/notation-core-go/pull/16).\n- [actions/checkout: 4 to 7](https://github.com/yizha1/notation-core-go/pull/15).\n\n## notation-go\n\nCurrent: `v1.3.4-monthly-test.202610`  \nProposed: `v1.3.5-manual-review.20261018`\n\n- [LDAP: 3.4.14 to 3.4.15; x/crypto: 0.57.0 to 0.58.0; x/mod: 0.41.0 to 0.42.0; ORAS: 2.6.2 to 2.6.3](https://github.com/yizha1/notation-go/pull/15), plus transitive dependency updates.\n- [actions/upload-artifact: 7.0.1 to 7.0.2](https://github.com/yizha1/notation-go/pull/13).\n- Adopt the proposed Core release above.\n\n## notation CLI\n\nCurrent: `v1.3.4-monthly-test.202610`  \nProposed: `v1.3.5-manual-review.20261018`\n\n- [pflag: 1.0.9 to 1.0.10; x/term: 0.46.0 to 0.47.0; ORAS: 2.6.2 to 2.6.3](https://github.com/yizha1/notation/pull/25).\n- [Test dependencies: Ginkgo 2.33.0 to 2.33.1; Gomega 1.40.0 to 1.44.0](https://github.com/yizha1/notation/pull/25), plus transitive dependency updates.\n- [codecov/codecov-action: 5.4.2 to 7.1.1](https://github.com/yizha1/notation/pull/22).\n- [actions/stale: 9.1.0 to 11.0.0](https://github.com/yizha1/notation/pull/21).\n- [actions/checkout: 4.2.2 to 7.0.1](https://github.com/yizha1/notation/pull/20).\n- [actions/add-to-project: 1.0.2 to 2.0.0](https://github.com/yizha1/notation/pull/19).\n- [github/codeql-action/init: 4.38.2 to 4.38.3](https://github.com/yizha1/notation/pull/18).\n- Adopt the proposed Core and Go releases above.\n\n**Status:** awaiting scope approval. The stale-action PR has a failing check. Fork execution setup is still pending; nothing has been released.\n\nTo approve this scope, comment `/approve` on this issue.\n\n<details>\n<summary>Full plan</summary>\n\n[Full pinned plan and commits](https://github.com/yizha1/notation/blob/monthly-plan-review-manual-20261018/.github/release-trials/manual-review-20261018/plan.json).\n\nApproval applies to the current plan. If the scope changes, fresh approval is required. Failed checks and unreviewed deployment remain blocked. Draft releases require your review and manual publication.\n\n</details>\n",
+    "created_at": "2026-10-19T04:42:33Z"
+  },
+  "approval": {
+    "id": 6260449311,
+    "user": {
+      "login": "yizha1",
+      "id": 107919912,
+      "node_id": "U_kgDOBm66KA",
+      "avatar_url": "https://avatars.githubusercontent.com/u/107919912?u=262327fd997f1d0bc5d57891bba3fba025f91104&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/yizha1",
+      "html_url": "https://github.com/yizha1",
+      "followers_url": "https://api.github.com/users/yizha1/followers",
+      "following_url": "https://api.github.com/users/yizha1/following{/other_user}",
+      "gists_url": "https://api.github.com/users/yizha1/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/yizha1/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/yizha1/subscriptions",
+      "organizations_url": "https://api.github.com/users/yizha1/orgs",
+      "repos_url": "https://api.github.com/users/yizha1/repos",
+      "events_url": "https://api.github.com/users/yizha1/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/yizha1/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "/approve\n",
+    "created_at": "2026-10-19T05:35:17Z",
+    "updated_at": "2026-10-19T05:35:17Z",
+    "issue_url": "https://api.github.com/repos/yizha1/notation/issues/26"
+  }
+}

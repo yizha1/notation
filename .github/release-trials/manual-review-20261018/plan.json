@@ -1,0 +1,962 @@
+{
+  "plan_sha256": "d7a9cd8f0235aa78b2af278596a76a94f1ad38fff034bce1bfcc19800f62e9b3",
+  "payload": {
+    "schema": "fork-manual-release-plan-v1",
+    "cycle_id": "manual-review-20261018",
+    "created_at": "2026-10-19T04:36:17.542621+00:00",
+    "owner": "yizha1",
+    "implementation_sha": "8ccc041e0bc2afc5c8a99cda24abd280cdffbd58",
+    "inventory_sha256": "bf076a2646893f1aaa40ed40d310bd7cdbe01e28a5d1ce2f2ff45d1e8da4dc56",
+    "plan_branch": "monthly-plan-review-manual-20261018",
+    "status": "awaiting-owner-plan-approval-and-validation",
+    "policy": {
+      "plan_approval": "Exact unedited owner comment in the recorded plan issue",
+      "approval_action": "/approve",
+      "execution": "Agent-mediated; separate deployment and execution scope approval required",
+      "publication": "Owner manually publishes qualified true drafts; never automated",
+      "consumers": "Same release ID, signed tag/commit and asset IDs/hashes/sizes, then anonymous public verification",
+      "canonical_writes": false,
+      "automatic_publication": false,
+      "advisory_dispositions": "No prior fork exception authority is inherited; exact new-tag context requires separate validation and review"
+    },
+    "repositories": [
+      {
+        "repository": "yizha1/notation-core-go",
+        "default_branch": "main",
+        "default_head": "5abbe190e87208274ae8c9fa2697607fb0ed80c2",
+        "source_branch": "monthly-patch-test-main",
+        "source_head": "a9f29c693c9c6ce8ceda77626226488d5ca8ce21",
+        "release_branch": "monthly-patch-test-release-1.3",
+        "release_head": "7a53d45b39bab73a7d3be4ee0a8c4cb0cc5b1fed",
+        "baseline_tag": "v1.3.2-monthly-test.202610",
+        "baseline_commit": "7a53d45b39bab73a7d3be4ee0a8c4cb0cc5b1fed",
+        "baseline_tag_object_sha": null,
+        "baseline_signature_status": "Not verified by this inventory",
+        "baseline_release_id": 403927680,
+        "proposed_prerelease_tag": "v1.3.3-manual-review.20261018",
+        "proposed_version": "1.3.3-manual-review.20261018",
+        "planned_release_flags": {
+          "draft_until_owner_publication": true,
+          "prerelease": true
+        },
+        "version_reservation": "Proposed only; absent from captured lists; fresh absence checks required",
+        "producer_requirements": [],
+        "pulls": [
+          {
+            "number": 17,
+            "title": "build(deps): bump the fork-dependencies group across 1 directory with 2 updates",
+            "url": "https://github.com/yizha1/notation-core-go/pull/17",
+            "author": "dependabot[bot]",
+            "base": "monthly-patch-test-main",
+            "base_sha": "a9f29c693c9c6ce8ceda77626226488d5ca8ce21",
+            "head": "1ec4add89a9bf7d057a9b51c4043e8166b9e7932",
+            "head_repository": "yizha1/notation-core-go",
+            "draft": false,
+            "state": "open",
+            "commits": [
+              {
+                "sha": "1ec4add89a9bf7d057a9b51c4043e8166b9e7932",
+                "url": "https://github.com/yizha1/notation-core-go/commit/1ec4add89a9bf7d057a9b51c4043e8166b9e7932",
+                "subject": "build(deps): bump the fork-dependencies group across 1 directory with 2 updates"
+              }
+            ],
+            "files": [
+              "go.mod",
+              "go.sum"
+            ],
+            "checks": {
+              "headRefOid": "1ec4add89a9bf7d057a9b51c4043e8166b9e7932",
+              "mergeStateStatus": "CLEAN",
+              "mergeable": "MERGEABLE",
+              "reviewDecision": "",
+              "statusCheckRollup": [
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-14T13:14:28Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-core-go/actions/runs/38570127126/job/115872833211",
+                  "name": "minimum",
+                  "startedAt": "2026-10-14T13:14:25Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-14T13:16:44Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-core-go/actions/runs/38570127126/job/115872882858",
+                  "name": "qualify (1.26)",
+                  "startedAt": "2026-10-14T13:14:31Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-14T13:16:44Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-core-go/actions/runs/38570127126/job/115872883001",
+                  "name": "qualify (stable)",
+                  "startedAt": "2026-10-14T13:14:32Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                }
+              ]
+            },
+            "scope_classification": "Dependency group; module compatibility and patch scope require validation",
+            "qualification_status": "Proposed, not qualified",
+            "blocking_checks": []
+          },
+          {
+            "number": 16,
+            "title": "build(deps): bump actions/upload-artifact from 7.0.1 to 7.0.2",
+            "url": "https://github.com/yizha1/notation-core-go/pull/16",
+            "author": "dependabot[bot]",
+            "base": "monthly-patch-test-main",
+            "base_sha": "a9f29c693c9c6ce8ceda77626226488d5ca8ce21",
+            "head": "a3f1065abcc7a0c064409836c6c5e69e5fd41d88",
+            "head_repository": "yizha1/notation-core-go",
+            "draft": false,
+            "state": "open",
+            "commits": [
+              {
+                "sha": "a3f1065abcc7a0c064409836c6c5e69e5fd41d88",
+                "url": "https://github.com/yizha1/notation-core-go/commit/a3f1065abcc7a0c064409836c6c5e69e5fd41d88",
+                "subject": "build(deps): bump actions/upload-artifact from 7.0.1 to 7.0.2"
+              }
+            ],
+            "files": [
+              ".github/workflows/notation-fork-ci.yml"
+            ],
+            "checks": {
+              "headRefOid": "a3f1065abcc7a0c064409836c6c5e69e5fd41d88",
+              "mergeStateStatus": "CLEAN",
+              "mergeable": "MERGEABLE",
+              "reviewDecision": "",
+              "statusCheckRollup": [
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T05:49:43Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-core-go/actions/runs/38209644077/job/114680718716",
+                  "name": "minimum",
+                  "startedAt": "2026-10-12T05:49:38Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T05:51:40Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-core-go/actions/runs/38209644077/job/114680746902",
+                  "name": "qualify (1.26)",
+                  "startedAt": "2026-10-12T05:49:46Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T05:51:51Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-core-go/actions/runs/38209644077/job/114680746874",
+                  "name": "qualify (stable)",
+                  "startedAt": "2026-10-12T05:49:45Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                }
+              ]
+            },
+            "scope_classification": "Workflow/Actions dependency change; explicit review required",
+            "qualification_status": "Proposed, not qualified",
+            "blocking_checks": []
+          },
+          {
+            "number": 15,
+            "title": "build(deps): bump actions/checkout from 4 to 7",
+            "url": "https://github.com/yizha1/notation-core-go/pull/15",
+            "author": "dependabot[bot]",
+            "base": "monthly-patch-test-main",
+            "base_sha": "a9f29c693c9c6ce8ceda77626226488d5ca8ce21",
+            "head": "44fac3c5bbe0005fc025785c273c7910466e9d6c",
+            "head_repository": "yizha1/notation-core-go",
+            "draft": false,
+            "state": "open",
+            "commits": [
+              {
+                "sha": "44fac3c5bbe0005fc025785c273c7910466e9d6c",
+                "url": "https://github.com/yizha1/notation-core-go/commit/44fac3c5bbe0005fc025785c273c7910466e9d6c",
+                "subject": "build(deps): bump actions/checkout from 4 to 7"
+              }
+            ],
+            "files": [
+              ".github/workflows/notation-fork-ci.yml",
+              ".github/workflows/reusable-license-checker.yml"
+            ],
+            "checks": {
+              "headRefOid": "44fac3c5bbe0005fc025785c273c7910466e9d6c",
+              "mergeStateStatus": "CLEAN",
+              "mergeable": "MERGEABLE",
+              "reviewDecision": "",
+              "statusCheckRollup": [
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T05:49:34Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-core-go/actions/runs/38209634994/job/114680690693",
+                  "name": "minimum",
+                  "startedAt": "2026-10-12T05:49:31Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T05:51:34Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-core-go/actions/runs/38209634994/job/114680713818",
+                  "name": "qualify (1.26)",
+                  "startedAt": "2026-10-12T05:49:37Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T05:51:51Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-core-go/actions/runs/38209634994/job/114680713808",
+                  "name": "qualify (stable)",
+                  "startedAt": "2026-10-12T05:49:37Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                }
+              ]
+            },
+            "scope_classification": "Workflow/Actions dependency change; explicit review required",
+            "qualification_status": "Proposed, not qualified",
+            "blocking_checks": []
+          }
+        ]
+      },
+      {
+        "repository": "yizha1/notation-go",
+        "default_branch": "main",
+        "default_head": "e818e29989a523d1a6d676d7dec4044a7fee6010",
+        "source_branch": "monthly-patch-test-main",
+        "source_head": "fc4833479b3cb6daefd992cebdda1c3f9a39cb1e",
+        "release_branch": "monthly-patch-test-release-1.3",
+        "release_head": "e267bca91a22c92db8524759c116d3224963c5f1",
+        "baseline_tag": "v1.3.4-monthly-test.202610",
+        "baseline_commit": "e267bca91a22c92db8524759c116d3224963c5f1",
+        "baseline_tag_object_sha": null,
+        "baseline_signature_status": "Not verified by this inventory",
+        "baseline_release_id": 403986903,
+        "proposed_prerelease_tag": "v1.3.5-manual-review.20261018",
+        "proposed_version": "1.3.5-manual-review.20261018",
+        "planned_release_flags": {
+          "draft_until_owner_publication": true,
+          "prerelease": true
+        },
+        "version_reservation": "Proposed only; absent from captured lists; fresh absence checks required",
+        "producer_requirements": [
+          {
+            "repository": "yizha1/notation-core-go",
+            "exact_version": "v1.3.3-manual-review.20261018",
+            "condition": "Wait for owner publication, immutable-byte anonymous verification and an actual qualified fork dependency-adoption PR",
+            "adoption_pr": null
+          }
+        ],
+        "pulls": [
+          {
+            "number": 15,
+            "title": "build(deps): bump the fork-dependencies group across 1 directory with 4 updates",
+            "url": "https://github.com/yizha1/notation-go/pull/15",
+            "author": "dependabot[bot]",
+            "base": "monthly-patch-test-main",
+            "base_sha": "fc4833479b3cb6daefd992cebdda1c3f9a39cb1e",
+            "head": "36b654cc3cf25eb0416e726447fc70157cfc1ccc",
+            "head_repository": "yizha1/notation-go",
+            "draft": false,
+            "state": "open",
+            "commits": [
+              {
+                "sha": "36b654cc3cf25eb0416e726447fc70157cfc1ccc",
+                "url": "https://github.com/yizha1/notation-go/commit/36b654cc3cf25eb0416e726447fc70157cfc1ccc",
+                "subject": "build(deps): bump the fork-dependencies group across 1 directory with 4 updates"
+              }
+            ],
+            "files": [
+              "go.mod",
+              "go.sum"
+            ],
+            "checks": {
+              "headRefOid": "36b654cc3cf25eb0416e726447fc70157cfc1ccc",
+              "mergeStateStatus": "CLEAN",
+              "mergeable": "MERGEABLE",
+              "reviewDecision": "",
+              "statusCheckRollup": [
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-16T07:24:33Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-go/actions/runs/38867012322/job/116862057170",
+                  "name": "minimum",
+                  "startedAt": "2026-10-16T07:24:29Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-16T07:26:13Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-go/actions/runs/38867012322/job/116862091667",
+                  "name": "qualify (1.26)",
+                  "startedAt": "2026-10-16T07:24:36Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-16T07:25:56Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-go/actions/runs/38867012322/job/116862091658",
+                  "name": "qualify (stable)",
+                  "startedAt": "2026-10-16T07:24:36Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                }
+              ]
+            },
+            "scope_classification": "Dependency group; module compatibility and patch scope require validation",
+            "qualification_status": "Proposed, not qualified",
+            "blocking_checks": []
+          },
+          {
+            "number": 13,
+            "title": "build(deps): bump actions/upload-artifact from 7.0.1 to 7.0.2",
+            "url": "https://github.com/yizha1/notation-go/pull/13",
+            "author": "dependabot[bot]",
+            "base": "monthly-patch-test-main",
+            "base_sha": "fc4833479b3cb6daefd992cebdda1c3f9a39cb1e",
+            "head": "f2c76c6237bfe48a3b57eb5205bb99fcbac6b8e7",
+            "head_repository": "yizha1/notation-go",
+            "draft": false,
+            "state": "open",
+            "commits": [
+              {
+                "sha": "f2c76c6237bfe48a3b57eb5205bb99fcbac6b8e7",
+                "url": "https://github.com/yizha1/notation-go/commit/f2c76c6237bfe48a3b57eb5205bb99fcbac6b8e7",
+                "subject": "build(deps): bump actions/upload-artifact from 7.0.1 to 7.0.2"
+              }
+            ],
+            "files": [
+              ".github/workflows/notation-fork-ci.yml"
+            ],
+            "checks": {
+              "headRefOid": "f2c76c6237bfe48a3b57eb5205bb99fcbac6b8e7",
+              "mergeStateStatus": "CLEAN",
+              "mergeable": "MERGEABLE",
+              "reviewDecision": "",
+              "statusCheckRollup": [
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T22:29:21Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-go/actions/runs/38316924005/job/115035662579",
+                  "name": "minimum",
+                  "startedAt": "2026-10-12T22:29:15Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T22:31:05Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-go/actions/runs/38316924005/job/115035705840",
+                  "name": "qualify (1.26)",
+                  "startedAt": "2026-10-12T22:29:24Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T22:31:19Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation-go/actions/runs/38316924005/job/115035705720",
+                  "name": "qualify (stable)",
+                  "startedAt": "2026-10-12T22:29:24Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                }
+              ]
+            },
+            "scope_classification": "Workflow/Actions dependency change; explicit review required",
+            "qualification_status": "Proposed, not qualified",
+            "blocking_checks": []
+          }
+        ]
+      },
+      {
+        "repository": "yizha1/notation",
+        "default_branch": "main",
+        "default_head": "799c48f48044cfaca45c79fa3bd4faa7efd4a279",
+        "source_branch": "monthly-patch-test-main",
+        "source_head": "4b14fb3643eaa95165af0f49cdb5cad2c6365681",
+        "release_branch": "monthly-patch-test-release-1.3",
+        "release_head": "4c63f998b91f7d9e8f29fb8937f863e87c893e8f",
+        "baseline_tag": "v1.3.4-monthly-test.202610",
+        "baseline_commit": "4c63f998b91f7d9e8f29fb8937f863e87c893e8f",
+        "baseline_tag_object_sha": null,
+        "baseline_signature_status": "Not verified by this inventory",
+        "baseline_release_id": 404026681,
+        "proposed_prerelease_tag": "v1.3.5-manual-review.20261018",
+        "proposed_version": "1.3.5-manual-review.20261018",
+        "planned_release_flags": {
+          "draft_until_owner_publication": true,
+          "prerelease": true
+        },
+        "version_reservation": "Proposed only; absent from captured lists; fresh absence checks required",
+        "producer_requirements": [
+          {
+            "repository": "yizha1/notation-core-go",
+            "exact_version": "v1.3.3-manual-review.20261018",
+            "condition": "Wait for owner publication, immutable-byte anonymous verification and an actual qualified fork dependency-adoption PR",
+            "adoption_pr": null
+          },
+          {
+            "repository": "yizha1/notation-go",
+            "exact_version": "v1.3.5-manual-review.20261018",
+            "condition": "Wait for owner publication, immutable-byte anonymous verification and an actual qualified fork dependency-adoption PR",
+            "adoption_pr": null
+          }
+        ],
+        "pulls": [
+          {
+            "number": 25,
+            "title": "build(deps): Bump the fork-dependencies group across 2 directories with 5 updates",
+            "url": "https://github.com/yizha1/notation/pull/25",
+            "author": "dependabot[bot]",
+            "base": "monthly-patch-test-main",
+            "base_sha": "4b14fb3643eaa95165af0f49cdb5cad2c6365681",
+            "head": "bb415280230ea479cf1bf664431e8d0108a8597f",
+            "head_repository": "yizha1/notation",
+            "draft": false,
+            "state": "open",
+            "commits": [
+              {
+                "sha": "bb415280230ea479cf1bf664431e8d0108a8597f",
+                "url": "https://github.com/yizha1/notation/commit/bb415280230ea479cf1bf664431e8d0108a8597f",
+                "subject": "build(deps): Bump the fork-dependencies group across 2 directories with 5 updates"
+              }
+            ],
+            "files": [
+              "go.mod",
+              "go.sum",
+              "test/e2e/go.mod",
+              "test/e2e/go.sum",
+              "test/e2e/plugin/go.mod",
+              "test/e2e/plugin/go.sum"
+            ],
+            "checks": {
+              "headRefOid": "bb415280230ea479cf1bf664431e8d0108a8597f",
+              "mergeStateStatus": "CLEAN",
+              "mergeable": "MERGEABLE",
+              "reviewDecision": "",
+              "statusCheckRollup": [
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-16T06:06:52Z",
+                  "conclusion": "SKIPPED",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38859380912/job/116837979751",
+                  "name": "Continuous Integration",
+                  "startedAt": "2026-10-16T06:06:59Z",
+                  "status": "COMPLETED",
+                  "workflowName": "build"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-16T06:06:47Z",
+                  "conclusion": "SKIPPED",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38859373147/job/116837921334",
+                  "name": "Continuous Integration",
+                  "startedAt": "2026-10-16T06:06:47Z",
+                  "status": "COMPLETED",
+                  "workflowName": "build"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-16T06:06:58Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38859380782/job/116837944604",
+                  "name": "minimum",
+                  "startedAt": "2026-10-16T06:06:55Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-16T06:09:34Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38859380782/job/116837975896",
+                  "name": "qualify (1.26)",
+                  "startedAt": "2026-10-16T06:07:02Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-16T06:08:52Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38859380782/job/116837975850",
+                  "name": "qualify (stable)",
+                  "startedAt": "2026-10-16T06:07:01Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                }
+              ]
+            },
+            "scope_classification": "Dependency group; module compatibility and patch scope require validation",
+            "qualification_status": "Proposed, not qualified",
+            "blocking_checks": []
+          },
+          {
+            "number": 22,
+            "title": "build(deps): Bump codecov/codecov-action from 5.4.2 to 7.1.1",
+            "url": "https://github.com/yizha1/notation/pull/22",
+            "author": "dependabot[bot]",
+            "base": "monthly-patch-test-main",
+            "base_sha": "4b14fb3643eaa95165af0f49cdb5cad2c6365681",
+            "head": "2338203454b6bcd263fc7d586ad273f60e3421b2",
+            "head_repository": "yizha1/notation",
+            "draft": false,
+            "state": "open",
+            "commits": [
+              {
+                "sha": "2338203454b6bcd263fc7d586ad273f60e3421b2",
+                "url": "https://github.com/yizha1/notation/commit/2338203454b6bcd263fc7d586ad273f60e3421b2",
+                "subject": "build(deps): Bump codecov/codecov-action from 5.4.2 to 7.1.1"
+              }
+            ],
+            "files": [
+              ".github/workflows/build.yml"
+            ],
+            "checks": {
+              "headRefOid": "2338203454b6bcd263fc7d586ad273f60e3421b2",
+              "mergeStateStatus": "CLEAN",
+              "mergeable": "MERGEABLE",
+              "reviewDecision": "",
+              "statusCheckRollup": [
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:44Z",
+                  "conclusion": "SKIPPED",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297136942/job/114970824108",
+                  "name": "Continuous Integration",
+                  "startedAt": "2026-10-12T19:21:44Z",
+                  "status": "COMPLETED",
+                  "workflowName": "build"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:38Z",
+                  "conclusion": "SKIPPED",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297126904/job/114970846606",
+                  "name": "Continuous Integration",
+                  "startedAt": "2026-10-12T19:21:48Z",
+                  "status": "COMPLETED",
+                  "workflowName": "build"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:50Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297137078/job/114970822726",
+                  "name": "minimum",
+                  "startedAt": "2026-10-12T19:21:47Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:24:03Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297137078/job/114970859619",
+                  "name": "qualify (1.26)",
+                  "startedAt": "2026-10-12T19:21:53Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:24:05Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297137078/job/114970859708",
+                  "name": "qualify (stable)",
+                  "startedAt": "2026-10-12T19:21:53Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                }
+              ]
+            },
+            "scope_classification": "Workflow/Actions dependency change; explicit review required",
+            "qualification_status": "Proposed, not qualified",
+            "blocking_checks": []
+          },
+          {
+            "number": 21,
+            "title": "build(deps): Bump actions/stale from 9.1.0 to 11.0.0",
+            "url": "https://github.com/yizha1/notation/pull/21",
+            "author": "dependabot[bot]",
+            "base": "monthly-patch-test-main",
+            "base_sha": "4b14fb3643eaa95165af0f49cdb5cad2c6365681",
+            "head": "474e4e16697a69224da5ffc4aee50f5342238d28",
+            "head_repository": "yizha1/notation",
+            "draft": false,
+            "state": "open",
+            "commits": [
+              {
+                "sha": "474e4e16697a69224da5ffc4aee50f5342238d28",
+                "url": "https://github.com/yizha1/notation/commit/474e4e16697a69224da5ffc4aee50f5342238d28",
+                "subject": "build(deps): Bump actions/stale from 9.1.0 to 11.0.0"
+              }
+            ],
+            "files": [
+              ".github/workflows/stale.yml"
+            ],
+            "checks": {
+              "headRefOid": "474e4e16697a69224da5ffc4aee50f5342238d28",
+              "mergeStateStatus": "UNSTABLE",
+              "mergeable": "MERGEABLE",
+              "reviewDecision": "",
+              "statusCheckRollup": [
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:39Z",
+                  "conclusion": "SKIPPED",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297127017/job/114970791376",
+                  "name": "Continuous Integration",
+                  "startedAt": "2026-10-12T19:21:39Z",
+                  "status": "COMPLETED",
+                  "workflowName": "build"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:34Z",
+                  "conclusion": "SKIPPED",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297118644/job/114970803043",
+                  "name": "Continuous Integration",
+                  "startedAt": "2026-10-12T19:21:41Z",
+                  "status": "COMPLETED",
+                  "workflowName": "build"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:45Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297126833/job/114970788758",
+                  "name": "minimum",
+                  "startedAt": "2026-10-12T19:21:41Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:24:02Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297126833/job/114970827888",
+                  "name": "qualify (1.26)",
+                  "startedAt": "2026-10-12T19:21:48Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:24:22Z",
+                  "conclusion": "FAILURE",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297126833/job/114970827669",
+                  "name": "qualify (stable)",
+                  "startedAt": "2026-10-12T19:21:48Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                }
+              ]
+            },
+            "scope_classification": "Workflow/Actions dependency change; explicit review required",
+            "qualification_status": "Proposed, not qualified",
+            "blocking_checks": [
+              {
+                "__typename": "CheckRun",
+                "completedAt": "2026-10-12T19:24:22Z",
+                "conclusion": "FAILURE",
+                "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297126833/job/114970827669",
+                "name": "qualify (stable)",
+                "startedAt": "2026-10-12T19:21:48Z",
+                "status": "COMPLETED",
+                "workflowName": "Fork dependency CI"
+              }
+            ]
+          },
+          {
+            "number": 20,
+            "title": "build(deps): Bump actions/checkout from 4.2.2 to 7.0.1",
+            "url": "https://github.com/yizha1/notation/pull/20",
+            "author": "dependabot[bot]",
+            "base": "monthly-patch-test-main",
+            "base_sha": "4b14fb3643eaa95165af0f49cdb5cad2c6365681",
+            "head": "5c55f8003d8525734f07b7a2dfea25c2c4e7c781",
+            "head_repository": "yizha1/notation",
+            "draft": false,
+            "state": "open",
+            "commits": [
+              {
+                "sha": "5c55f8003d8525734f07b7a2dfea25c2c4e7c781",
+                "url": "https://github.com/yizha1/notation/commit/5c55f8003d8525734f07b7a2dfea25c2c4e7c781",
+                "subject": "build(deps): Bump actions/checkout from 4.2.2 to 7.0.1"
+              }
+            ],
+            "files": [
+              ".github/workflows/build.yml",
+              ".github/workflows/codeql.yml",
+              ".github/workflows/notation-fork-ci.yml",
+              ".github/workflows/release-github.yml",
+              ".github/workflows/scorecard.yml"
+            ],
+            "checks": {
+              "headRefOid": "5c55f8003d8525734f07b7a2dfea25c2c4e7c781",
+              "mergeStateStatus": "CLEAN",
+              "mergeable": "MERGEABLE",
+              "reviewDecision": "",
+              "statusCheckRollup": [
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:33Z",
+                  "conclusion": "SKIPPED",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297116345/job/114970755369",
+                  "name": "Continuous Integration",
+                  "startedAt": "2026-10-12T19:21:33Z",
+                  "status": "COMPLETED",
+                  "workflowName": "build"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:28Z",
+                  "conclusion": "SKIPPED",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297108423/job/114970730099",
+                  "name": "Continuous Integration",
+                  "startedAt": "2026-10-12T19:21:29Z",
+                  "status": "COMPLETED",
+                  "workflowName": "build"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:40Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297116484/job/114970753542",
+                  "name": "minimum",
+                  "startedAt": "2026-10-12T19:21:36Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:23:55Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297116484/job/114970801372",
+                  "name": "qualify (1.26)",
+                  "startedAt": "2026-10-12T19:21:43Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:24:11Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297116484/job/114970801410",
+                  "name": "qualify (stable)",
+                  "startedAt": "2026-10-12T19:21:44Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                }
+              ]
+            },
+            "scope_classification": "Workflow/Actions dependency change; explicit review required",
+            "qualification_status": "Proposed, not qualified",
+            "blocking_checks": []
+          },
+          {
+            "number": 19,
+            "title": "build(deps): Bump actions/add-to-project from 1.0.2 to 2.0.0",
+            "url": "https://github.com/yizha1/notation/pull/19",
+            "author": "dependabot[bot]",
+            "base": "monthly-patch-test-main",
+            "base_sha": "4b14fb3643eaa95165af0f49cdb5cad2c6365681",
+            "head": "0f9179398f7d4dff931cfce9e60f4f1074036943",
+            "head_repository": "yizha1/notation",
+            "draft": false,
+            "state": "open",
+            "commits": [
+              {
+                "sha": "0f9179398f7d4dff931cfce9e60f4f1074036943",
+                "url": "https://github.com/yizha1/notation/commit/0f9179398f7d4dff931cfce9e60f4f1074036943",
+                "subject": "build(deps): Bump actions/add-to-project from 1.0.2 to 2.0.0"
+              }
+            ],
+            "files": [
+              ".github/workflows/add-to-project.yml"
+            ],
+            "checks": {
+              "headRefOid": "0f9179398f7d4dff931cfce9e60f4f1074036943",
+              "mergeStateStatus": "CLEAN",
+              "mergeable": "MERGEABLE",
+              "reviewDecision": "",
+              "statusCheckRollup": [
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:30Z",
+                  "conclusion": "SKIPPED",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297110803/job/114970736183",
+                  "name": "Continuous Integration",
+                  "startedAt": "2026-10-12T19:21:30Z",
+                  "status": "COMPLETED",
+                  "workflowName": "build"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:25Z",
+                  "conclusion": "SKIPPED",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297101431/job/114970742237",
+                  "name": "Continuous Integration",
+                  "startedAt": "2026-10-12T19:21:31Z",
+                  "status": "COMPLETED",
+                  "workflowName": "build"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:38Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297110796/job/114970734636",
+                  "name": "minimum",
+                  "startedAt": "2026-10-12T19:21:33Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:24:06Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297110796/job/114970783574",
+                  "name": "qualify (1.26)",
+                  "startedAt": "2026-10-12T19:21:41Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:24:01Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297110796/job/114970783573",
+                  "name": "qualify (stable)",
+                  "startedAt": "2026-10-12T19:21:40Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                }
+              ]
+            },
+            "scope_classification": "Workflow/Actions dependency change; explicit review required",
+            "qualification_status": "Proposed, not qualified",
+            "blocking_checks": []
+          },
+          {
+            "number": 18,
+            "title": "build(deps): Bump github/codeql-action/init from 4.38.2 to 4.38.3",
+            "url": "https://github.com/yizha1/notation/pull/18",
+            "author": "dependabot[bot]",
+            "base": "monthly-patch-test-main",
+            "base_sha": "4b14fb3643eaa95165af0f49cdb5cad2c6365681",
+            "head": "3eadf7e9ddea13d2cb2361c44513537146af8414",
+            "head_repository": "yizha1/notation",
+            "draft": false,
+            "state": "open",
+            "commits": [
+              {
+                "sha": "3eadf7e9ddea13d2cb2361c44513537146af8414",
+                "url": "https://github.com/yizha1/notation/commit/3eadf7e9ddea13d2cb2361c44513537146af8414",
+                "subject": "build(deps): Bump github/codeql-action/init from 4.38.2 to 4.38.3"
+              }
+            ],
+            "files": [
+              ".github/workflows/codeql.yml"
+            ],
+            "checks": {
+              "headRefOid": "3eadf7e9ddea13d2cb2361c44513537146af8414",
+              "mergeStateStatus": "CLEAN",
+              "mergeable": "MERGEABLE",
+              "reviewDecision": "",
+              "statusCheckRollup": [
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:25Z",
+                  "conclusion": "SKIPPED",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297101864/job/114970706712",
+                  "name": "Continuous Integration",
+                  "startedAt": "2026-10-12T19:21:25Z",
+                  "status": "COMPLETED",
+                  "workflowName": "build"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:22Z",
+                  "conclusion": "SKIPPED",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297094514/job/114970686832",
+                  "name": "Continuous Integration",
+                  "startedAt": "2026-10-12T19:21:22Z",
+                  "status": "COMPLETED",
+                  "workflowName": "build"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:21:33Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297101840/job/114970705360",
+                  "name": "minimum",
+                  "startedAt": "2026-10-12T19:21:28Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:24:05Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297101840/job/114970758659",
+                  "name": "qualify (1.26)",
+                  "startedAt": "2026-10-12T19:21:37Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                },
+                {
+                  "__typename": "CheckRun",
+                  "completedAt": "2026-10-12T19:23:50Z",
+                  "conclusion": "SUCCESS",
+                  "detailsUrl": "https://github.com/yizha1/notation/actions/runs/38297101840/job/114970758555",
+                  "name": "qualify (stable)",
+                  "startedAt": "2026-10-12T19:21:36Z",
+                  "status": "COMPLETED",
+                  "workflowName": "Fork dependency CI"
+                }
+              ]
+            },
+            "scope_classification": "Workflow/Actions dependency change; explicit review required",
+            "qualification_status": "Proposed, not qualified",
+            "blocking_checks": []
+          }
+        ]
+      }
+    ],
+    "execution_blockers": [
+      "The manual-first fork worker is not installed; canonical-only workflows cannot execute this plan.",
+      "No dependency merge or release execution before exact owner plan approval and separate deployment/execution approval.",
+      "Baseline annotated-tag signatures and source/module compatibility still require qualification.",
+      "Proposed tags are absent from captured lists only, not remotely reserved; fresh explicit-404 tag/release checks and leases are required.",
+      "Existing checks do not establish release qualification; required reviews and skipped-check applicability remain to be validated.",
+      "yizha1/notation#21: qualify (stable) FAILURE"
+    ]
+  },
+  "rendered_body_sha256": "d1c97363f8c85e64ab87dadae378a53a2e0cf5f02a01678cf933d59a431f6dd7"
+}

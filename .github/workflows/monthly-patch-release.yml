@@ -18,21 +18,22 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: No-write plan, or coordinator-authorized canonical execution
+        description: Owner-approved fixed fork trial execution
         type: choice
-        options: [dry-run, execute]
-        default: dry-run
+        options: [execute]
+        default: execute
         required: true
       month:
-        description: Optional YYYY-MM cycle to inspect or resume (UTC month by default)
+        description: Fixed trial month, 2026-10
         type: string
-        required: false
+        default: 2026-10
+        required: true
       controller_issue:
-        description: Trusted cycle issue in notaryproject/notation, required for execution
+        description: Fixed owner review issue 26
         type: string
         required: false
       plan_id:
-        description: Approved assessment digest, required for execution
+        description: Fixed approved fork plan digest
         type: string
         required: false
       attempt:

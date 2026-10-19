@@ -58,9 +58,9 @@ def _identity(expected, pr):
     for key in ("base_sha", "head_sha", "head_tree", "candidate_sha", "candidate_tree"):
         _require(re.fullmatch(r"[0-9a-f]{40}", expected.get(key, "")),
                  f"invalid expected {key}")
-    _require(re.fullmatch(r"notaryproject/(notation|notation-go|notation-core-go)",
+    _require(re.fullmatch(r"yizha1/(notation|notation-go|notation-core-go)",
                          expected.get("repository", "")), "noncanonical repository")
-    if expected["repository"] == "notaryproject/notation-core-go":
+    if expected["repository"] == "yizha1/notation-core-go":
         _require(expected.get("vote_scope") == "dependency-candidate",
                  "Core release vote policy must declare dependency-candidate scope")
         _require(expected["head_sha"] == expected["candidate_sha"] and
@@ -70,11 +70,11 @@ def _identity(expected, pr):
         _require(expected["head_sha"] != expected["candidate_sha"] and
                  expected["head_tree"] != expected["candidate_tree"],
                  "release vote has no distinct metadata commit")
-    _require(re.fullmatch(r"release-\d+\.\d+", expected.get("base_ref", "")),
+    _require(expected.get("base_ref") == "monthly-patch-test-release-1.3",
              "invalid stable release branch")
-    _require(re.fullmatch(r"v\d+\.\d+\.\d+", expected.get("tag", "")),
+    _require(re.fullmatch(r"v1\.3\.\d+-manual-review\.20261018", expected.get("tag", "")),
              "invalid stable patch tag")
-    _require(expected["base_ref"] == "release-" + expected["tag"][1:].rsplit(".", 1)[0],
+    _require(expected["base_ref"] == "monthly-patch-test-release-1.3",
              "release tag and branch differ")
     actor = _login(expected["actor"])
     _require(isinstance(expected.get("number"), int) and expected["number"] > 0,
@@ -187,7 +187,7 @@ def qualify_release_commit(expected, pr, commit):
 def _metadata(expected, release_diff):
     """Allow only the verified upstream version fields, not arbitrary source edits."""
     repo = expected["repository"]
-    if repo == "notaryproject/notation-core-go":
+    if repo == "yizha1/notation-core-go":
         _require(expected.get("vote_scope") == "dependency-candidate"
                  and expected["head_sha"] == expected["candidate_sha"]
                  and expected["head_tree"] == expected["candidate_tree"],
@@ -196,8 +196,8 @@ def _metadata(expected, release_diff):
                  release_diff.get("before") is None and release_diff.get("after") is None,
                  "Core vote must not add metadata or unexplained source changes")
         return
-    path = {"notaryproject/notation-go": "signer/signer.go",
-            "notaryproject/notation": "internal/version/version.go"}.get(repo)
+    path = {"yizha1/notation-go": "signer/signer.go",
+            "yizha1/notation": "internal/version/version.go"}.get(repo)
     _require(path is not None, "repository release metadata policy is not defined")
     _require(release_diff.get("files") == [{"filename": path, "status": "modified"}],
              "release vote changes files outside version metadata")
@@ -222,9 +222,26 @@ def _metadata(expected, release_diff):
 
 
 def assess_vote(expected, pr, reviews, roster_text, release_diff):
-    """Qualify votes after verifying roster and exact metadata-only release scope."""
+    """Fork owner approves the exact metadata HEAD, without impersonating upstream maintainers."""
+    _identity(expected, pr)
     _metadata(expected, release_diff)
-    return qualify_release_vote(expected, pr, reviews, parse_repo_maintainers(roster_text))
+    _require(pr.get("state") in {"open", "closed"} and
+             (pr.get("state") != "closed" or pr.get("merged_at")),
+             "fork metadata PR was closed without merging")
+    if pr.get("draft"):
+        return {"status": "waiting", "reason": "Fork metadata PR remains draft"}
+    wanted = f"/approve-release {expected['head_sha']}"
+    for comment in reviews:
+        if (comment.get("user", {}).get("login") == "yizha1"
+                and comment.get("user", {}).get("type") == "User"
+                and type(comment.get("id")) is int and comment["id"] > 0
+                and comment.get("body") == wanted
+                and comment.get("created_at") == comment.get("updated_at")
+                and comment.get("created_at", "") >= pr.get("created_at", "")
+                and comment.get("issue_url") ==
+                f"https://api.github.com/repos/{expected['repository']}/issues/{expected['number']}"):
+            return {"status": "ready", "owner_comment": comment["id"]}
+    return {"status": "waiting", "reason": f"Fork owner must post exact unedited `{wanted}`"}
 
 
 def _contents(api, repository, path, ref):
@@ -255,11 +272,11 @@ def validate_vote(api, plan):
              expected["maintainer_roster_sha"] == plan.get("maintainer_roster_sha"),
              "missing trusted maintainer roster commit")
     pr = api.request(f"repos/{repo}/pulls/{expected['number']}")
-    reviews = list(api.pages(f"repos/{repo}/pulls/{expected['number']}/reviews"))
-    roster = _contents(api, repo, "MAINTAINERS", expected["maintainer_roster_sha"])
+    reviews = list(api.pages(f"repos/{repo}/issues/{expected['number']}/comments"))
+    roster = ""
     compare = api.request(f"repos/{repo}/compare/{expected['candidate_sha']}..."
                           f"{expected['head_sha']}")
-    core = repo == "notaryproject/notation-core-go"
+    core = repo == "yizha1/notation-core-go"
     _require(compare.get("status") == ("identical" if core else "ahead") and
              compare.get("ahead_by") == (0 if core else 1) and compare.get("behind_by") == 0,
              "release vote candidate scope changed")

@@ -38,28 +38,31 @@ class WorkerBootstrapReleaseTests(unittest.TestCase):
     def setUp(self):
         self.sha = "a" * 40
         self.entry = {
-            "path": "notaryproject/notation/.github/workflows/monthly-patch-worker.yml@" + self.sha,
+            "path": "yizha1/notation/.github/workflows/monthly-patch-worker.yml@" + self.sha,
             "ref": self.sha,
             "sha": self.sha,
         }
         self.run = {
-            "repository": {"full_name": "notaryproject/notation"},
-            "head_branch": "main",
+            "repository": {"full_name": "yizha1/notation"},
+            "head_branch": "monthly-manual-executor-20261018",
             "event": "workflow_dispatch",
             "head_sha": self.sha,
             "referenced_workflows": [self.entry],
+            "actor": {"login": "yizha1"}, "run_attempt": 1,
         }
         self.environment = {
             "GH_TOKEN": "read-only-workflow-token",
-            "GITHUB_REPOSITORY": "notaryproject/notation",
-            "GITHUB_REF": "refs/heads/main",
+            "GITHUB_REPOSITORY": "yizha1/notation",
+            "GITHUB_REF": "refs/heads/monthly-manual-executor-20261018",
             "GITHUB_EVENT_NAME": "workflow_dispatch",
             "GITHUB_SHA": self.sha,
             "GITHUB_RUN_ID": "123",
             "EXPECTED_WORKER_SHA": self.sha,
+            "DEPLOYMENT_SHA": self.sha, "CALLER_SHA": self.sha,
+            "ENABLED": "true", "GITHUB_ACTOR": "yizha1",
             "GITHUB_OUTPUT": "mocked-worker-output",
         }
-        self.main = "d" * 40
+        self.main = self.sha
         self.comparison = {"status": "ahead", "behind_by": 0}
 
     def execute_guard(self, accepted):
@@ -72,10 +75,9 @@ class WorkerBootstrapReleaseTests(unittest.TestCase):
             path = command[2]
             if path == f"repos/{self.environment['GITHUB_REPOSITORY']}/actions/runs/123":
                 return json.dumps(self.run)
-            if path == "repos/notaryproject/notation/branches/main":
-                return json.dumps({"commit": {"sha": self.main}})
-            self.assertEqual(path, f"repos/notaryproject/notation/compare/{self.environment['EXPECTED_WORKER_SHA']}...{self.main}")
-            return json.dumps(self.comparison)
+            self.assertEqual(path, "repos/yizha1/notation/branches/monthly-manual-executor-20261018")
+            return json.dumps({"commit": {"sha": self.main}})
+
 
         output = mock_open()
         with patch.dict(os.environ, self.environment, clear=True), \
@@ -83,7 +85,7 @@ class WorkerBootstrapReleaseTests(unittest.TestCase):
              patch("builtins.open", output):
             if accepted:
                 exec(self.guard, {})
-                self.assertEqual(request.call_count, 3)
+                self.assertEqual(request.call_count, 2)
                 output.assert_called_once_with("mocked-worker-output", "a", encoding="utf-8")
                 output().write.assert_called_once_with(
                     f"worker_sha={self.environment['EXPECTED_WORKER_SHA']}\n"
@@ -110,13 +112,12 @@ class WorkerBootstrapReleaseTests(unittest.TestCase):
         ]
         self.execute_guard(False)
 
-    def test_unmerged_or_divergent_central_revision_is_rejected_before_checkout(self):
-        for status, behind in (("behind", 1), ("diverged", 1), ("ahead", 1)):
-            self.comparison = {"status": status, "behind_by": behind}
-            self.execute_guard(False)
+    def test_moved_or_unreviewed_shared_deployment_is_rejected_before_checkout(self):
+        self.main = "d" * 40
+        self.execute_guard(False)
 
-    def test_missing_ancestry_evidence_is_rejected(self):
-        self.comparison = {}
+    def test_disabled_fork_cannot_checkout_shared_helpers(self):
+        self.environment["ENABLED"] = "false"
         self.execute_guard(False)
 
     def test_cli_cannot_select_a_worker_commit_different_from_its_caller(self):
@@ -141,19 +142,19 @@ class WorkerBootstrapReleaseTests(unittest.TestCase):
         self.execute_guard(False)
 
     def test_reference_without_ref_suffix_is_rejected(self):
-        self.entry["path"] = "notaryproject/notation/.github/workflows/monthly-patch-worker.yml@"
+        self.entry["path"] = "yizha1/notation/.github/workflows/monthly-patch-worker.yml@"
         self.execute_guard(False)
 
     def test_moving_main_reference_is_rejected_even_with_matching_sha(self):
-        self.entry["path"] = "notaryproject/notation/.github/workflows/monthly-patch-worker.yml@main"
-        self.entry["ref"] = "refs/heads/main"
+        self.entry["path"] = "yizha1/notation/.github/workflows/monthly-patch-worker.yml@main"
+        self.entry["ref"] = "refs/heads/monthly-manual-executor-20261018"
         self.execute_guard(False)
 
     def test_moving_full_main_reference_is_rejected_even_with_matching_sha(self):
         self.entry["path"] = (
-            "notaryproject/notation/.github/workflows/monthly-patch-worker.yml@refs/heads/main"
+            "yizha1/notation/.github/workflows/monthly-patch-worker.yml@refs/heads/monthly-manual-executor-20261018"
         )
-        self.entry["ref"] = "refs/heads/main"
+        self.entry["ref"] = "refs/heads/monthly-manual-executor-20261018"
         self.execute_guard(False)
 
     def test_noncanonical_caller_is_rejected(self):
@@ -191,11 +192,11 @@ class WorkerBootstrapReleaseTests(unittest.TestCase):
     def test_local_cli_reusable_reference_uses_caller_sha(self):
         self.environment["EXPECTED_WORKER_SHA"] = self.environment["GITHUB_SHA"]
         self.environment["GITHUB_WORKFLOW_REF"] = (
-            "notaryproject/notation/.github/workflows/monthly-patch-release.yml@refs/heads/main"
+            "yizha1/notation/.github/workflows/monthly-patch-release.yml@refs/heads/monthly-manual-executor-20261018"
         )
         self.entry.update({
             "path": (
-                "notaryproject/notation/.github/workflows/monthly-patch-worker.yml@"
+                "yizha1/notation/.github/workflows/monthly-patch-worker.yml@"
                 + self.environment["GITHUB_SHA"]
             ),
             "ref": self.environment["GITHUB_SHA"],
@@ -204,12 +205,13 @@ class WorkerBootstrapReleaseTests(unittest.TestCase):
         self.execute_guard(True)
 
     def test_literal_remote_library_reference_uses_central_sha_not_caller_sha(self):
-        self.environment["GITHUB_REPOSITORY"] = "notaryproject/notation-core-go"
+        self.environment["GITHUB_REPOSITORY"] = "yizha1/notation-core-go"
         self.environment["GITHUB_WORKFLOW_REF"] = (
-            "notaryproject/notation-core-go/.github/workflows/monthly-patch-release.yml@refs/heads/main"
+            "yizha1/notation-core-go/.github/workflows/monthly-patch-release.yml@refs/heads/monthly-manual-executor-20261018"
         )
         self.run["repository"]["full_name"] = self.environment["GITHUB_REPOSITORY"]
         self.environment["GITHUB_SHA"] = "b" * 40
+        self.environment["CALLER_SHA"] = "b" * 40
         self.run["head_sha"] = "b" * 40
         self.assertNotEqual(self.environment["GITHUB_SHA"], self.environment["EXPECTED_WORKER_SHA"])
         self.execute_guard(True)

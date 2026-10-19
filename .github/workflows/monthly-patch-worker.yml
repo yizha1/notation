@@ -17,15 +17,15 @@ on:
   workflow_call:
     inputs:
       mode:
-        description: No-write plan, or coordinator-authorized canonical execution
+        description: Fixed owner-approved fork execution
         type: string
         required: true
       month:
-        description: Optional YYYY-MM cycle to inspect or resume (UTC month by default)
+        description: Fixed trial month 2026-10
         type: string
         required: false
       controller_issue:
-        description: Trusted cycle issue in notaryproject/notation, required for execution
+        description: Trusted cycle issue in yizha1/notation, required for execution
         type: string
         required: false
       plan_id:
@@ -55,13 +55,17 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: monthly-release-worker-${{ github.repository }}
+  group: monthly-dependency-patch-${{ github.repository }}
   cancel-in-progress: false
 
 env:
   GOWORK: 'off'
   GOTOOLCHAIN: local
   MONTHLY_PATCH_COORDINATOR_REQUIRED: 'true'
+  MONTHLY_PATCH_FORK_MANUAL_ENABLED: ${{ vars.MONTHLY_PATCH_FORK_MANUAL_ENABLED }}
+  MONTHLY_PATCH_FORK_DEPLOYMENT_SHA: ${{ vars.MONTHLY_PATCH_FORK_DEPLOYMENT_SHA }}
+  MONTHLY_PATCH_FORK_CALLER_SHA: ${{ vars.MONTHLY_PATCH_FORK_CALLER_SHA }}
+  MONTHLY_PATCH_ACTOR: ${{ vars.MONTHLY_PATCH_ACTOR }}
   MONTHLY_PATCH_CONTROLLER_ISSUE: ${{ inputs.controller_issue }}
   MONTHLY_PATCH_CONTROLLER_PLAN: ${{ inputs.plan_id }}
   MONTHLY_PATCH_CONTROLLER_ATTEMPT: ${{ inputs.attempt }}
@@ -70,8 +74,8 @@ env:
 jobs:
   prepare:
     if: >-
-      contains(fromJSON('["notaryproject/notation-core-go","notaryproject/notation-go","notaryproject/notation"]'), github.repository) &&
-      github.ref == 'refs/heads/main' &&
+      contains(fromJSON('["yizha1/notation-core-go","yizha1/notation-go","yizha1/notation"]'), github.repository) &&
+      github.ref == 'refs/heads/monthly-manual-executor-20261018' &&
       github.event_name == 'workflow_dispatch' &&
       (inputs.mode == 'dry-run' || (inputs.mode == 'execute' && github.actor == vars.MONTHLY_PATCH_ACTOR))
     runs-on: ubuntu-24.04
@@ -92,6 +96,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           EXPECTED_WORKER_SHA: ${{ inputs.worker_sha }}
+          DEPLOYMENT_SHA: ${{ vars.MONTHLY_PATCH_FORK_DEPLOYMENT_SHA }}
+          CALLER_SHA: ${{ vars.MONTHLY_PATCH_FORK_CALLER_SHA }}
+          ENABLED: ${{ vars.MONTHLY_PATCH_FORK_MANUAL_ENABLED }}
         run: |
           python3 - <<'PY'
           import json
@@ -103,14 +110,14 @@ jobs:
           sha = os.environ["EXPECTED_WORKER_SHA"]
           if (
               repository not in {
-                  "notaryproject/notation-core-go",
-                  "notaryproject/notation-go",
-                  "notaryproject/notation",
+                  "yizha1/notation-core-go",
+                  "yizha1/notation-go",
+                  "yizha1/notation",
               }
-              or os.environ["GITHUB_REF"] != "refs/heads/main"
+              or os.environ["GITHUB_REF"] != "refs/heads/monthly-manual-executor-20261018"
               or os.environ["GITHUB_EVENT_NAME"] != "workflow_dispatch"
               or not re.fullmatch(r"[0-9a-f]{40}", sha)
-              or (repository == "notaryproject/notation" and sha != os.environ["GITHUB_SHA"])
+              or (repository == "yizha1/notation" and sha != os.environ["GITHUB_SHA"])
           ):
               raise SystemExit("Invalid canonical worker invocation")
           run = json.loads(subprocess.check_output([
@@ -119,12 +126,12 @@ jobs:
           ], text=True))
           if (
               run.get("repository", {}).get("full_name") != repository
-              or run.get("head_branch") != "main"
+              or run.get("head_branch") != "monthly-manual-executor-20261018"
               or run.get("event") != "workflow_dispatch"
               or run.get("head_sha") != os.environ["GITHUB_SHA"]
           ):
               raise SystemExit("Run does not match the canonical caller")
-          expected_path = f"notaryproject/notation/.github/workflows/monthly-patch-worker.yml@{sha}"
+          expected_path = f"yizha1/notation/.github/workflows/monthly-patch-worker.yml@{sha}"
           references = [
               entry for entry in run.get("referenced_workflows", [])
               if entry.get("path", "").split("@", 1)[0] == expected_path.split("@", 1)[0]
@@ -135,22 +142,26 @@ jobs:
               or references[0].get("sha") != sha
           ):
               raise SystemExit("Central worker SHA does not match the invoked reusable workflow")
-          main = json.loads(subprocess.check_output([
-              "gh", "api", "repos/notaryproject/notation/branches/main",
-          ], text=True))["commit"]["sha"]
-          if not re.fullmatch(r"[0-9a-f]{40}", main):
-              raise SystemExit("Invalid canonical central main identity")
-          comparison = json.loads(subprocess.check_output([
-              "gh", "api", f"repos/notaryproject/notation/compare/{sha}...{main}",
+          if (
+              sha != os.environ["DEPLOYMENT_SHA"]
+              or os.environ["GITHUB_SHA"] != os.environ["CALLER_SHA"]
+              or os.environ["GITHUB_ACTOR"] != "yizha1"
+              or os.environ["ENABLED"] != "true"
+              or run.get("actor", {}).get("login") != "yizha1"
+              or run.get("run_attempt") != 1
+          ):
+              raise SystemExit("Unreviewed fork deployment revision or actor")
+          ref = json.loads(subprocess.check_output([
+              "gh", "api", "repos/yizha1/notation/branches/monthly-manual-executor-20261018",
           ], text=True))
-          if comparison.get("status") not in {"identical", "ahead"} or comparison.get("behind_by") != 0:
-              raise SystemExit("Central worker revision has not merged into canonical main")
+          if ref["commit"]["sha"] != sha:
+              raise SystemExit("Shared fork deployment ref moved")
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write(f"worker_sha={sha}\n")
           PY
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          repository: notaryproject/notation
+          repository: yizha1/notation
           ref: ${{ steps.authorize-worker.outputs.worker_sha }}
           path: automation
           persist-credentials: false
@@ -171,8 +182,10 @@ jobs:
         env:
           MONTHLY_PATCH_COORDINATOR_REQUIRED: 'false'
         run: |
-          python3 -m unittest discover -s . -p 'test_*release*.py'
-          python3 -m unittest discover -s . -p 'test_upstream_authorization.py'
+          python3 -m unittest discover -s . -p 'test_fork_manual_executor.py'
+          python3 -m unittest discover -s . -p 'test_fork_draft_download.py'
+          python3 -m unittest discover -s . -p 'test_worker_bootstrap_release.py'
+          python3 -m unittest discover -s . -p 'test_monthly_release_checks.py'
       - name: Merge checked Dependabot PRs and prepare an unpushed release candidate
         id: cycle
         env:
@@ -201,6 +214,68 @@ jobs:
             ${{ runner.temp }}/monthly-candidate/candidate.bundle
           if-no-files-found: warn
 
+  propagation-prepare:
+    needs: prepare
+    if: needs.prepare.outputs.action == 'waiting'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          repository: yizha1/notation
+          ref: ${{ needs.prepare.outputs.worker_sha }}
+          path: automation
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: monthly-candidate
+          path: ${{ runner.temp }}/monthly-candidate
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: stable
+          cache: false
+      - name: Prepare producer-only manifest patch without write credentials
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 automation/.github/scripts/notation_fork_propagation.py prepare \
+            --plan "$RUNNER_TEMP/monthly-candidate/plan.json" --output "$RUNNER_TEMP/propagation"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: monthly-propagation
+          path: ${{ runner.temp }}/propagation/propagation.json
+          if-no-files-found: error
+
+  propagation-publish:
+    needs: [prepare, propagation-prepare]
+    if: needs.propagation-prepare.result == 'success'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          repository: yizha1/notation
+          ref: ${{ needs.prepare.outputs.worker_sha }}
+          path: automation
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: monthly-propagation
+          path: ${{ runner.temp }}/propagation
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        with:
+          go-version: stable
+          cache: false
+      - name: Revalidate and sign only the exact producer-scoped PR
+        env:
+          GH_TOKEN: ${{ secrets.MONTHLY_PATCH_TOKEN }}
+          MONTHLY_PATCH_TOKEN_READY: ${{ secrets.MONTHLY_PATCH_TOKEN != '' }}
+          MONTHLY_PATCH_SIGNING_KEY: ${{ secrets.MONTHLY_PATCH_SIGNING_KEY }}
+          MONTHLY_PATCH_SIGNER_LOGIN: ${{ vars.MONTHLY_PATCH_SIGNER_LOGIN }}
+          MONTHLY_PATCH_SIGNER_EMAIL: ${{ vars.MONTHLY_PATCH_SIGNER_EMAIL }}
+          MONTHLY_PATCH_SIGNER_NAME: ${{ vars.MONTHLY_PATCH_SIGNER_NAME }}
+        run: |
+          python3 automation/.github/scripts/notation_fork_propagation.py publish \
+            --prepared "$RUNNER_TEMP/propagation/propagation.json" --output "$RUNNER_TEMP/propagation-result"
+
   qualify:
     needs: prepare
     if: needs.prepare.outputs.action == 'qualify'
@@ -212,7 +287,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          repository: notaryproject/notation
+          repository: yizha1/notation
           ref: ${{ needs.prepare.outputs.worker_sha }}
           path: automation
           persist-credentials: false
@@ -245,7 +320,7 @@ jobs:
       - name: Qualify modules, tests, licensing and vulnerabilities
         env:
           MONTHLY_RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-          MONTHLY_PATCH_ADVISORY_DISPOSITIONS: ${{ vars.MONTHLY_PATCH_ADVISORY_DISPOSITIONS }}
+          MONTHLY_PATCH_ADVISORY_DISPOSITIONS: ''
         run: |
           python3 automation/.github/scripts/qualify_monthly_candidate.py candidate \
             --repository "$GITHUB_REPOSITORY" --evidence "$RUNNER_TEMP/source-evidence"
@@ -267,7 +342,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          repository: notaryproject/notation
+          repository: yizha1/notation
           ref: ${{ needs.prepare.outputs.worker_sha }}
           path: automation
           persist-credentials: false
@@ -328,7 +403,7 @@ jobs:
           TAG: ${{ needs.prepare.outputs.tag }}
           COMMIT: ${{ needs.prepare.outputs.commit }}
           MONTHLY_RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-          MONTHLY_PATCH_ADVISORY_DISPOSITIONS: ${{ vars.MONTHLY_PATCH_ADVISORY_DISPOSITIONS }}
+          MONTHLY_PATCH_ADVISORY_DISPOSITIONS: ''
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
           python3 automation/.github/scripts/build_monthly_assets.py candidate \
@@ -353,7 +428,7 @@ jobs:
     if: >-
       always() && needs.prepare.result == 'success' && needs.package.result == 'success' &&
       inputs.mode == 'execute' && github.event_name == 'workflow_dispatch' &&
-      github.ref == 'refs/heads/main' && github.actor == vars.MONTHLY_PATCH_ACTOR &&
+      github.ref == 'refs/heads/monthly-manual-executor-20261018' && github.actor == vars.MONTHLY_PATCH_ACTOR &&
       ((needs.prepare.outputs.action == 'qualify' && needs.qualify.result == 'success') ||
        needs.prepare.outputs.action == 'package')
     runs-on: ubuntu-24.04
@@ -365,7 +440,7 @@ jobs:
           cache: false
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          repository: notaryproject/notation
+          repository: yizha1/notation
           ref: ${{ needs.prepare.outputs.worker_sha }}
           persist-credentials: false
           path: automation
@@ -451,12 +526,46 @@ jobs:
           path: ${{ runner.temp }}/published/plan.json
           if-no-files-found: warn
 
-  verify:
+  download-draft:
     needs: [prepare, publish]
     if: >-
       always() && needs.prepare.result == 'success' &&
-      (needs.publish.result == 'success' || needs.prepare.outputs.action == 'verify' ||
-       needs.prepare.outputs.action == 'draft-check')
+      (needs.publish.result == 'success' || needs.prepare.outputs.action == 'draft-check')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          repository: yizha1/notation
+          ref: ${{ needs.prepare.outputs.worker_sha }}
+          path: automation
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        if: needs.publish.result == 'success'
+        with:
+          name: monthly-publication
+          path: ${{ runner.temp }}/publication
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        if: needs.prepare.outputs.action == 'draft-check'
+        with:
+          name: monthly-candidate
+          path: ${{ runner.temp }}/publication
+      - name: Fetch exact draft bytes without checking out or executing candidate code
+        env:
+          GH_TOKEN: ${{ secrets.MONTHLY_PATCH_TOKEN }}
+        run: |
+          python3 automation/.github/scripts/fork_draft_download.py \
+            --plan "$RUNNER_TEMP/publication/plan.json" --output "$RUNNER_TEMP/draft-download"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: monthly-recorded-draft-bytes
+          path: ${{ runner.temp }}/draft-download/
+          if-no-files-found: error
+
+  verify:
+    needs: [prepare, publish, download-draft]
+    if: >-
+      always() && needs.prepare.result == 'success' &&
+      (needs.download-draft.result == 'success' || needs.prepare.outputs.action == 'verify')
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -471,7 +580,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          repository: notaryproject/notation
+          repository: yizha1/notation
           ref: ${{ needs.prepare.outputs.worker_sha }}
           path: automation
           persist-credentials: false
@@ -482,12 +591,12 @@ jobs:
           ref: ${{ needs.prepare.outputs.commit }}
           persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        if: needs.publish.result == 'success'
+        if: needs.download-draft.result == 'success'
         with:
-          name: monthly-publication
+          name: monthly-recorded-draft-bytes
           path: ${{ runner.temp }}/publication
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        if: needs.prepare.outputs.action == 'verify' || needs.prepare.outputs.action == 'draft-check'
+        if: needs.prepare.outputs.action == 'verify'
         with:
           name: monthly-candidate
           path: ${{ runner.temp }}/publication
@@ -496,18 +605,21 @@ jobs:
           go-version: stable
           check-latest: true
           cache-dependency-path: 'candidate/**/go.sum'
-      - name: Test recorded draft assets with read-only access, or public assets anonymously
+      - name: Test trusted downloaded draft bytes without release credentials, or public assets anonymously
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           PLATFORM: ${{ matrix.platform }}
           MONTHLY_RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-          MONTHLY_PATCH_ADVISORY_DISPOSITIONS: ${{ vars.MONTHLY_PATCH_ADVISORY_DISPOSITIONS }}
+          MONTHLY_PATCH_ADVISORY_DISPOSITIONS: ''
+          ACTION: ${{ needs.prepare.outputs.action }}
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
+          args=()
+          if [[ "$ACTION" != verify ]]; then args+=(--downloaded-assets "$RUNNER_TEMP/publication"); fi
           python3 automation/.github/scripts/test_monthly_public_release.py \
             --plan "$RUNNER_TEMP/publication/plan.json" --source candidate \
-            --platform "$PLATFORM" --evidence "$RUNNER_TEMP/public-evidence"
+            --platform "$PLATFORM" --evidence "$RUNNER_TEMP/public-evidence" "${args[@]}"
       - name: Retain native functional tests and packaged-binary E2E evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -521,14 +633,14 @@ jobs:
     if: >-
       always() && needs.prepare.result == 'success' && needs.verify.result == 'success' &&
       inputs.mode == 'execute' && github.event_name == 'workflow_dispatch' &&
-      github.ref == 'refs/heads/main' && github.actor == vars.MONTHLY_PATCH_ACTOR &&
+      github.ref == 'refs/heads/monthly-manual-executor-20261018' && github.actor == vars.MONTHLY_PATCH_ACTOR &&
       (needs.publish.result == 'success' || needs.prepare.outputs.action == 'verify' ||
        needs.prepare.outputs.action == 'draft-check')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          repository: notaryproject/notation
+          repository: yizha1/notation
           ref: ${{ needs.prepare.outputs.worker_sha }}
           path: automation
           persist-credentials: false
@@ -561,17 +673,17 @@ jobs:
           if-no-files-found: error
 
   record-failure:
-    needs: [prepare, qualify, package, publish, verify, complete]
+    needs: [prepare, propagation-prepare, propagation-publish, qualify, package, publish, download-draft, verify, complete]
     if: >-
-      always() && needs.prepare.result == 'success' && contains(needs.*.result, 'failure') &&
+      always() && contains(needs.*.result, 'failure') &&
       inputs.mode == 'execute' && github.event_name == 'workflow_dispatch' &&
-      github.ref == 'refs/heads/main' && github.actor == vars.MONTHLY_PATCH_ACTOR &&
-      needs.prepare.outputs.mode != '' && needs.prepare.outputs.mode != 'dry-run'
+      github.ref == 'refs/heads/monthly-manual-executor-20261018' && github.actor == vars.MONTHLY_PATCH_ACTOR &&
+      needs.prepare.outputs.worker_sha != ''
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          repository: notaryproject/notation
+          repository: yizha1/notation
           ref: ${{ needs.prepare.outputs.worker_sha }}
           path: automation
           persist-credentials: false
@@ -580,7 +692,6 @@ jobs:
           GH_TOKEN: ${{ secrets.MONTHLY_PATCH_TOKEN }}
           MONTHLY_PATCH_TOKEN_READY: ${{ secrets.MONTHLY_PATCH_TOKEN != '' }}
           MONTHLY_PATCH_ENABLED: ${{ vars.MONTHLY_PATCH_ENABLED }}
-          MONTHLY_PATCH_SIGNING_KEY: ${{ secrets.MONTHLY_PATCH_SIGNING_KEY }}
           MONTHLY_PATCH_SIGNER_EMAIL: ${{ vars.MONTHLY_PATCH_SIGNER_EMAIL }}
           MONTHLY_PATCH_SIGNER_LOGIN: ${{ vars.MONTHLY_PATCH_SIGNER_LOGIN }}
           MONTHLY_PATCH_ACTOR: ${{ vars.MONTHLY_PATCH_ACTOR }}
@@ -588,31 +699,19 @@ jobs:
           MONTH: ${{ needs.prepare.outputs.month }}
           CYCLE_ID: ${{ needs.prepare.outputs.cycle_id }}
           FAILURE_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_RESULTS: ${{ toJSON(needs) }}
         run: |
-          python3 automation/.github/scripts/monthly_release.py failure \
-            --mode "$MODE" --month "$MONTH" --cycle-id "$CYCLE_ID" --output "$RUNNER_TEMP/failure" \
-            --reason "A workflow gate failed. Inspect $FAILURE_URL and its retained evidence before retrying."
-
-  notify-controller:
-    needs: [prepare, qualify, package, publish, verify, complete, record-failure]
-    if: >-
-      always() && needs.prepare.result == 'success' && needs.prepare.outputs.mode == 'execute' &&
-      github.event_name == 'workflow_dispatch' &&
-      inputs.mode == 'execute' && github.ref == 'refs/heads/main' &&
-      github.actor == vars.MONTHLY_PATCH_ACTOR
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-        with:
-          repository: notaryproject/notation
-          ref: ${{ needs.prepare.outputs.worker_sha }}
-          path: automation
-          persist-credentials: false
-      - name: Wake the controller, never publish a consumer directly
-        env:
-          GH_TOKEN: ${{ secrets.MONTHLY_PATCH_TOKEN }}
-          MONTHLY_PATCH_ACTOR: ${{ vars.MONTHLY_PATCH_ACTOR }}
-          MONTH: ${{ needs.prepare.outputs.month }}
-        run: |
-          python3 automation/.github/scripts/monthly_release.py notify-controller \
-            --mode execute --month "$MONTH" --output "$RUNNER_TEMP/notified"
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          sys.path.insert(0, "automation/.github/scripts")
+          import monthly_release as release
+          import notation_release_controller as controller
+          for stage, result in json.loads(os.environ["JOB_RESULTS"]).items():
+              if result["result"] == "failure":
+                  print(json.dumps(controller.failure(
+                      release.GitHub(), os.environ["GITHUB_REPOSITORY"], stage,
+                      f"Required {stage} job failed; inspect its exact log and retained evidence. No gate is waived.",
+                  )))
+          PY

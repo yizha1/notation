@@ -61,7 +61,7 @@ def download_draft(repository, identifier):
         return response.read()
 
 
-def verify(plan, source, platform, evidence):
+def verify(plan, source, platform, evidence, downloaded_assets=None):
     validate_plan(plan)
     draft = plan["status"] == "draft"
     if plan["status"] not in {"draft", "verifying"}:
@@ -70,7 +70,16 @@ def verify(plan, source, platform, evidence):
     evidence.mkdir(parents=True, exist_ok=True)
     api = GitHub()
     assert_tag(api, plan)
-    check_release_assets(api, plan, True) if draft else check_public_assets(api, plan)
+    if downloaded_assets is not None:
+        if not draft:
+            raise ValueError("Public verification must use anonymous real release downloads")
+        from notation_release_controller import digest
+        receipt = json.loads((downloaded_assets / "draft-download-receipt.json").read_text())
+        if receipt != {"plan_sha256": digest(plan), "repository": plan["repository"],
+                       "release_id": plan["release_id"], "tag": plan["tag"], "assets": plan["assets"]}:
+            raise ValueError("Trusted draft download receipt does not match the immutable plan")
+    else:
+        check_release_assets(api, plan, True) if draft else check_public_assets(api, plan)
     if git(["rev-parse", "HEAD"], source) != plan["commit"]:
         raise ValueError("Downloaded release tests must use its qualified source fixtures")
     project = plan["repository"].split("/")[1]
@@ -84,7 +93,8 @@ def verify(plan, source, platform, evidence):
     for name in wanted:
         expected = recorded[name]
         if draft:
-            content = download_draft(plan["repository"], expected["id"])
+            content = ((downloaded_assets / name).read_bytes() if downloaded_assets is not None
+                       else download_draft(plan["repository"], expected["id"]))
         else:
             url = f"https://github.com/{plan['repository']}/releases/download/{plan['tag']}/{name}"
             # No credentials: this gate also establishes public download availability.
@@ -119,5 +129,6 @@ if __name__ == "__main__":
     parser.add_argument("--source", type=pathlib.Path, required=True)
     parser.add_argument("--platform", required=True)
     parser.add_argument("--evidence", type=pathlib.Path, required=True)
+    parser.add_argument("--downloaded-assets", type=pathlib.Path)
     args = parser.parse_args()
-    verify(json.loads(args.plan.read_text(encoding="utf-8")), args.source, args.platform, args.evidence)
+    verify(json.loads(args.plan.read_text(encoding="utf-8")), args.source, args.platform, args.evidence, args.downloaded_assets)
