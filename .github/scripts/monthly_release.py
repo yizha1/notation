@@ -110,10 +110,86 @@ class GitHub:
             ))
 
     def checks(self, repository, number):
-        return json.loads(run([
+        if not REPOSITORY.fullmatch(repository) or type(number) is not int or number <= 0:
+            raise ValueError("Invalid fork pull-request check identity")
+        result = json.loads(run([
             "gh", "pr", "view", str(number), "--repo", repository,
             "--json", "headRefOid,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup",
         ]))
+        if not isinstance(result, dict):
+            raise ValueError("Invalid pull-request check response")
+        head = result.get("headRefOid", "")
+        if not isinstance(head, str) or not SHA.fullmatch(head) or not isinstance(result.get("statusCheckRollup"), list):
+            raise ValueError("Invalid pull-request check response")
+        if result["statusCheckRollup"]:
+            return result
+        pull_path = f"repos/{repository}/pulls/{number}"
+        if self.request(pull_path).get("head", {}).get("sha") != head:
+            raise ValueError("Pull-request HEAD changed before REST check discovery")
+        checks = self._check_pages(
+            f"repos/{repository}/commits/{head}/check-runs?filter=latest", "check_runs"
+        )
+        statuses = self._check_pages(
+            f"repos/{repository}/commits/{head}/status", "statuses", head
+        )
+        evidence, contexts = [], set()
+        for check in checks:
+            if (check.get("head_sha") != head or not isinstance(check.get("name"), str)
+                    or not check["name"] or not isinstance(check.get("app"), dict)
+                    or type(check["app"].get("id")) is not int
+                    or check["app"]["id"] <= 0
+                    or check.get("status") not in {"queued", "in_progress", "completed", "waiting", "requested", "pending"}
+                    or check.get("conclusion") not in {
+                        None, "success", "failure", "neutral", "cancelled", "skipped",
+                        "timed_out", "action_required", "stale", "startup_failure",
+                    }
+                    or (check["status"] == "completed" and check.get("conclusion") is None)
+                    or (check["status"] != "completed" and check.get("conclusion") is not None)):
+                raise ValueError("Invalid or mismatched REST check run")
+            evidence.append({
+                "__typename": "CheckRun", "databaseId": check["id"], "name": check["name"],
+                "headSha": head, "status": check["status"].upper(),
+                "conclusion": check["conclusion"].upper() if check.get("conclusion") else None,
+                "detailsUrl": check.get("details_url"),
+            })
+        for status in statuses:
+            context = status.get("context")
+            if (not isinstance(context, str) or not context or context in contexts
+                    or status.get("state") not in {"success", "failure", "error", "pending"}):
+                raise ValueError("Invalid or duplicate latest REST status context")
+            contexts.add(context)
+            evidence.append({
+                "__typename": "StatusContext", "databaseId": status["id"],
+                "context": context, "state": status["state"].upper(),
+                "targetUrl": status.get("target_url"),
+            })
+        if self.request(pull_path).get("head", {}).get("sha") != head:
+            raise ValueError("Pull-request HEAD changed during REST check discovery")
+        return {**result, "statusCheckRollup": evidence}
+
+    def _check_pages(self, path, key, head=None):
+        records, identities, total = [], set(), None
+        for page in range(1, 1001):
+            separator = "&" if "?" in path else "?"
+            response = self.request(f"{path}{separator}per_page=100&page={page}")
+            if (not isinstance(response, dict) or type(response.get("total_count")) is not int
+                    or response["total_count"] < 0 or not isinstance(response.get(key), list)
+                    or (head is not None and response.get("sha") != head)):
+                raise ValueError("Invalid REST check pagination response")
+            if total is None:
+                total = response["total_count"]
+            batch = response[key]
+            if response["total_count"] != total or len(batch) != min(100, total - len(records)):
+                raise ValueError("Incomplete or changing REST check pagination")
+            for item in batch:
+                if (not isinstance(item, dict) or type(item.get("id")) is not int
+                        or item["id"] <= 0 or item["id"] in identities):
+                    raise ValueError("Invalid or duplicated REST check identity")
+                identities.add(item["id"])
+                records.append(item)
+            if len(records) == total:
+                return records
+        raise ValueError("REST check pagination limit reached")
 
     def issue_editor(self, repository, number):
         owner, name = repository.split("/")

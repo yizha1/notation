@@ -73,6 +73,14 @@ The old CLI PR21 transient failure is not a permanent veto if the unchanged
 approved HEAD now passes; changing that HEAD requires new scope approval.
 All later source advances must be recorded dependency merge receipts.
 
+If GraphQL reports an empty CI rollup, the fork worker reads real repository-local
+check runs and latest commit statuses for the exact PR HEAD through paginated
+REST APIs. It checks the PR HEAD before and after discovery. Missing checks,
+incomplete responses, failed or pending checks, and API errors do not qualify a
+merge. Existing GraphQL failures and merge/review protections remain binding.
+Backport branches must run normal CI, including when a fork's existing workflow
+needs a manual dispatch at the exact backport HEAD.
+
 The proposed tags remain Core `v1.3.3-manual-review.20261018` and Go/CLI
 `v1.3.5-manual-review.20261018`. The executor rechecks absence, existing signed
 baselines, source/stable leases, and recorded producer versions. It cannot reopen

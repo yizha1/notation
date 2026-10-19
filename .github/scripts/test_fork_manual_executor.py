@@ -38,6 +38,179 @@ ENV = {
 }
 
 
+class RESTCheckFallbackTests(unittest.TestCase):
+    def setUp(self):
+        self.graph = {"headRefOid": SHA, "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+                      "reviewDecision": "", "statusCheckRollup": []}
+        self.pull = {"draft": False, "head": {"sha": SHA}}
+        self.runs = [
+            {"id": index, "name": name, "head_sha": SHA, "status": "completed",
+             "conclusion": "success", "app": {"id": 15368},
+             "details_url": f"https://github.com/{CORE}/actions/runs/123/job/{index}"}
+            for index, name in enumerate(("minimum", "qualify1.26", "qualifystable"), 1)
+        ]
+        self.statuses = []
+        self.api = release.GitHub()
+
+    def response(self, path):
+        if "/pulls/" in path:
+            return {"head": {"sha": SHA}}
+        if "/check-runs?" in path:
+            return {"total_count": len(self.runs), "check_runs": copy.deepcopy(self.runs)}
+        if "/status?" in path:
+            return {"sha": SHA, "total_count": len(self.statuses), "statuses": copy.deepcopy(self.statuses)}
+        raise AssertionError(path)
+
+    def assess(self, response=None):
+        with patch.object(release, "run", return_value=json.dumps(self.graph)), \
+                patch.object(self.api, "request", side_effect=response or self.response):
+            return self.api.checks(CORE, 19)
+
+    def test_three_real_successful_runs_qualify_without_changing_graphql_gates(self):
+        result = self.assess()
+        self.assertEqual([item["databaseId"] for item in result["statusCheckRollup"]], [1, 2, 3])
+        self.assertEqual([item["name"] for item in result["statusCheckRollup"]],
+                         ["minimum", "qualify1.26", "qualifystable"])
+        self.assertEqual(release.checks_ready(self.pull, result), (True, ""))
+        for field in ("headRefOid", "mergeable", "mergeStateStatus", "reviewDecision"):
+            self.assertEqual(result[field], self.graph[field])
+
+    def test_failed_or_pending_real_runs_remain_blocked(self):
+        for status, conclusion in (("completed", "failure"), ("in_progress", None),
+                                   ("queued", None), ("completed", "cancelled")):
+            with self.subTest(status=status, conclusion=conclusion):
+                self.runs[1].update(status=status, conclusion=conclusion)
+                self.assertFalse(release.checks_ready(self.pull, self.assess())[0])
+
+    def test_no_runs_or_statuses_never_manufactures_success(self):
+        self.runs = []
+        self.assertEqual(self.assess()["statusCheckRollup"], [])
+        self.assertFalse(release.checks_ready(self.pull, self.assess())[0])
+
+    def test_existing_failed_or_pending_graphql_rollup_is_never_replaced(self):
+        for evidence in ({"status": "COMPLETED", "conclusion": "FAILURE"},
+                         {"status": "IN_PROGRESS", "conclusion": None}):
+            self.graph["statusCheckRollup"] = [evidence]
+            with patch.object(release, "run", return_value=json.dumps(self.graph)), \
+                    patch.object(self.api, "request", side_effect=AssertionError("No REST fallback permitted")):
+                result = self.api.checks(CORE, 19)
+            self.assertEqual(result, self.graph)
+            self.assertFalse(release.checks_ready(self.pull, result)[0])
+
+    def test_merge_and_review_protections_are_not_overridden(self):
+        for field, value in (("mergeable", "CONFLICTING"), ("mergeStateStatus", "BLOCKED"),
+                             ("reviewDecision", "REVIEW_REQUIRED")):
+            with self.subTest(field=field):
+                self.graph[field] = value
+                self.assertFalse(release.checks_ready(self.pull, self.assess())[0])
+                self.setUp()
+
+    def test_check_run_must_match_exact_head(self):
+        self.runs[0]["head_sha"] = CALLER
+        with self.assertRaisesRegex(ValueError, "mismatched"):
+            self.assess()
+
+    def test_pull_head_is_rechecked_before_and_after_discovery(self):
+        for changed_call in (1, 2):
+            calls = 0
+            def response(path):
+                nonlocal calls
+                if "/pulls/" in path:
+                    calls += 1
+                    return {"head": {"sha": CALLER if calls == changed_call else SHA}}
+                return self.response(path)
+            with self.subTest(changed_call=changed_call), self.assertRaisesRegex(ValueError, "HEAD changed"):
+                self.assess(response)
+
+    def test_auth_network_and_protocol_errors_are_not_treated_as_absence(self):
+        for error in (release.APIError("HTTP 403"), release.APIError("HTTP 404"), release.APIError("HTTP 500"),
+                      RuntimeError("network unavailable")):
+            def response(path):
+                if "/check-runs?" in path:
+                    raise error
+                return self.response(path)
+            with self.subTest(error=str(error)), self.assertRaises(type(error)):
+                self.assess(response)
+
+    def test_status_contexts_are_real_latest_context_records_not_fake_checks(self):
+        for state, expected in (("success", True), ("failure", False), ("pending", False), ("error", False)):
+            self.statuses = [{"id": 88, "context": "external-ci", "state": state,
+                              "target_url": "https://github.com/yizha1/notation-core-go/actions/runs/123"}]
+            result = self.assess()
+            self.assertEqual(result["statusCheckRollup"][-1]["__typename"], "StatusContext")
+            self.assertEqual(result["statusCheckRollup"][-1]["databaseId"], 88)
+            self.assertEqual(release.checks_ready(self.pull, result)[0], expected)
+
+    def test_status_response_head_and_unique_latest_context_are_required(self):
+        def wrong_head(path):
+            result = self.response(path)
+            if "/status?" in path:
+                result["sha"] = CALLER
+            return result
+        with self.assertRaisesRegex(ValueError, "pagination"):
+            self.assess(wrong_head)
+        self.statuses = [{"id": 88, "context": "ci", "state": "success"},
+                         {"id": 89, "context": "ci", "state": "failure"}]
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            self.assess()
+
+    def test_paginated_latest_checks_include_failure_on_later_page(self):
+        runs = [{**self.runs[0], "id": index + 1, "name": f"ci-{index}"} for index in range(101)]
+        runs[-1]["conclusion"] = "failure"
+        def response(path):
+            if "/check-runs?" in path:
+                self.assertIn("filter=latest&per_page=100", path)
+                page = int(path.rsplit("page=", 1)[1])
+                return {"total_count": 101, "check_runs": runs[(page - 1) * 100:page * 100]}
+            return self.response(path)
+        result = self.assess(response)
+        self.assertEqual(len(result["statusCheckRollup"]), 101)
+        self.assertFalse(release.checks_ready(self.pull, result)[0])
+
+    def test_paginated_latest_statuses_include_pending_context_on_later_page(self):
+        statuses = [{"id": index + 1, "context": f"ci-{index}", "state": "success"}
+                    for index in range(101)]
+        statuses[-1]["state"] = "pending"
+        def response(path):
+            if "/status?" in path:
+                page = int(path.rsplit("page=", 1)[1])
+                return {"sha": SHA, "total_count": 101,
+                        "statuses": statuses[(page - 1) * 100:page * 100]}
+            return self.response(path)
+        result = self.assess(response)
+        self.assertEqual(len(result["statusCheckRollup"]), 104)
+        self.assertFalse(release.checks_ready(self.pull, result)[0])
+
+    def test_malformed_check_records_never_qualify(self):
+        for change in ({"app": None}, {"status": "completed", "conclusion": None},
+                       {"status": "in_progress", "conclusion": "success"}, {"id": 0},
+                       {"name": ""}, {"conclusion": "unknown"}):
+            with self.subTest(change=change):
+                self.runs[0].update(change)
+                with self.assertRaises(ValueError):
+                    self.assess()
+                self.setUp()
+
+    def test_incomplete_changing_duplicate_or_malformed_pages_fail_closed(self):
+        variants = ({"total_count": 4, "check_runs": self.runs},
+                    {"total_count": 1}, {"total_count": True, "check_runs": []},
+                    {"total_count": 2, "check_runs": [self.runs[0], self.runs[0]]})
+        for variant in variants:
+            def response(path):
+                return variant if "/check-runs?" in path else self.response(path)
+            with self.subTest(variant=variant), self.assertRaises(ValueError):
+                self.assess(response)
+        def changing(path):
+            if "/check-runs?" in path:
+                if path.endswith("page=1"):
+                    return {"total_count": 101, "check_runs": [
+                        {**self.runs[0], "id": index + 1} for index in range(100)]}
+                return {"total_count": 102, "check_runs": [{**self.runs[0], "id": 101}]}
+            return self.response(path)
+        with self.assertRaisesRegex(ValueError, "changing"):
+            self.assess(changing)
+
+
 class API:
     def __init__(self):
         fixture = json.loads((ROOT / "approval-fixture.json").read_text())
