@@ -165,8 +165,11 @@ It binds the three fixed issue IDs, old and new byte-exact bodies, the same
 The parent applies only those exact new bodies. Either recorded old or new body
 is accepted during this bounded rollout; arbitrary edits or new dependencies fail.
 The original bodies remain in the receipt's audit data, not in visible issues.
+Git checks out trial JSON with LF endings through `.gitattributes`, preserving
+the frozen byte digest on Windows as well as Linux and macOS. The verifier does
+not normalize receipt bytes or accept a different digest.
 
-Core's existing unpublished release416979094 and asset IDs655453799/655453836
+Core's existing qualified release416979094 and asset IDs655453799/655453836
 retain the same signed source, original bytes/hashes, branch lease, and native
 proof from run39210327124 using shared worker059ed8. A reviewed presentation
 deployment must not rewrite the old run as if it used new code, rebuild assets,

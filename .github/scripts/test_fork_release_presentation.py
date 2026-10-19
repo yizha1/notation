@@ -11,7 +11,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import copy
+import hashlib
 import os
+import pathlib
+import subprocess
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -28,6 +32,25 @@ class PresentationMigrationTests(unittest.TestCase):
         self.addCleanup(env.stop)
         self.api = API()
         self.receipt = presentation.receipt()
+
+    def test_windows_checkout_preserves_frozen_receipt_bytes(self):
+        root = pathlib.Path(presentation.__file__).resolve().parents[2]
+        relative = pathlib.Path(".github/release-trials/manual-review-20261018/presentation-v1.json")
+        with tempfile.TemporaryDirectory(prefix="presentation-checkout-") as directory:
+            checkout = pathlib.Path(directory)
+            target = checkout / relative
+            target.parent.mkdir(parents=True)
+            target.write_bytes((root / relative).read_bytes())
+            (checkout / ".gitattributes").write_bytes((root / ".gitattributes").read_bytes())
+            for arguments in (("init", "--quiet"), ("add", ".gitattributes", relative.as_posix())):
+                subprocess.run(["git", "-C", directory, "-c", "core.autocrlf=true", *arguments],
+                               check=True, capture_output=True)
+            target.unlink()
+            subprocess.run(["git", "-C", directory, "-c", "core.autocrlf=true",
+                            "checkout-index", "--force", "--all"], check=True, capture_output=True)
+            self.assertEqual(hashlib.sha256(target.read_bytes()).hexdigest(), presentation.RECEIPT_SHA256)
+            with patch.object(presentation, "__file__", str(checkout / ".github/scripts/fork_release_presentation.py")):
+                self.assertEqual(presentation.receipt(), self.receipt)
 
     def test_new_cli_body_preserves_exact_original_scope_and_owner_approval(self):
         self.api.issue["body"] = self.receipt["issues"][CLI]["body"]
