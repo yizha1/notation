@@ -217,7 +217,7 @@ jobs:
 
   propagation-prepare:
     needs: prepare
-    if: needs.prepare.outputs.action == 'waiting'
+    if: needs.prepare.outputs.action == 'waiting' && needs.prepare.outputs.status == 'waiting'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8

@@ -669,6 +669,12 @@ class ProducerAndVoteTests(unittest.TestCase):
 
 
 class WorkflowTests(unittest.TestCase):
+    def test_propagation_only_runs_while_waiting_for_dependencies_not_release_votes(self):
+        import re
+        workflow = (ROOT.parents[1] / "workflows/monthly-patch-worker.yml").read_text()
+        job = re.search(r"(?ms)^  propagation-prepare:\n(.*?)(?=^  [a-z][a-z-]*:|\Z)", workflow)[1]
+        self.assertIn("if: needs.prepare.outputs.action == 'waiting' && needs.prepare.outputs.status == 'waiting'", job)
+
     def test_secret_free_source_package_and_native_jobs(self):
         import re
         workflow = (ROOT.parents[1] / "workflows/monthly-patch-worker.yml").read_text()

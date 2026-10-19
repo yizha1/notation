@@ -100,6 +100,8 @@ manifest patch. A separate trusted job verifies its exact source hashes, module
 scope, and producer requirements, signs it, and opens an owner-authored source PR.
 It is never presented as a Dependabot PR or merged without CI/normal reviews.
 Transitive changes must follow the reviewed producer manifest policy.
+The propagation job runs only in the dependency-waiting phase, not while a
+stable backport or signed release metadata is waiting for review.
 
 All reachable findings and scanner/protocol failures block qualification.
 The deployment does not inherit prior fork advisory dispositions, and it does not
