@@ -1,5 +1,5 @@
 {
-  "plan_sha256": "7ad2e5c1abc90bba684dbc380b5f78cc32be88953f1da5c25955d7a9e324a91a",
+  "plan_sha256": "d7a9cd8f0235aa78b2af278596a76a94f1ad38fff034bce1bfcc19800f62e9b3",
   "payload": {
     "schema": "fork-manual-release-plan-v1",
     "cycle_id": "manual-review-20261018",
@@ -11,7 +11,7 @@
     "status": "awaiting-owner-plan-approval-and-validation",
     "policy": {
       "plan_approval": "Exact unedited owner comment in the recorded plan issue",
-      "approval_action": "/approve-fork-plan <full-plan-sha256>",
+      "approval_action": "/approve",
       "execution": "Agent-mediated; separate deployment and execution scope approval required",
       "publication": "Owner manually publishes qualified true drafts; never automated",
       "consumers": "Same release ID, signed tag/commit and asset IDs/hashes/sizes, then anonymous public verification",
