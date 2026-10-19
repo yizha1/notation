@@ -216,6 +216,10 @@ class API:
         fixture = json.loads((ROOT / "approval-fixture.json").read_text())
         self.issue, self.approval = fixture["issue"], fixture["approval"]
         self.envelope = json.loads((ROOT / "plan.json").read_text())
+        from fork_release_presentation import receipt, ROUTES
+        self.scopes = {repo: {"number": number, "body": receipt()["issues"][repo]["body"],
+                             "state": "open", "user": {"login": "yizha1"}}
+                       for repo, number in ROUTES.items() if repo != CLI}
         self.comments, self.writes, self.issues, self.assets, self.releases = [], [], [], [], []
         self.remote = None
         self.run = {
@@ -244,7 +248,8 @@ class API:
         if path.endswith("/releases"):
             return iter(copy.deepcopy(self.releases))
         if path.endswith("/comments"):
-            return iter(copy.deepcopy(self.comments))
+            return iter(copy.deepcopy([item for item in self.comments
+                                       if item["issue_url"] == "https://api.github.com/" + path.removesuffix("/comments")]))
         if "/issues?" in path:
             return iter(copy.deepcopy(self.issues))
         if path.endswith("/commits") or path.endswith("/files"):
@@ -273,6 +278,11 @@ class API:
             return copy.deepcopy(self.issue)
         if path == f"repos/{CLI}/issues/comments/{controller.APPROVAL_ID}":
             return copy.deepcopy(self.approval)
+        if "/issues/comments/" in path:
+            return copy.deepcopy(next(item for item in self.comments if item["id"] == int(path.rsplit("/", 1)[1])))
+        for repository, issue in self.scopes.items():
+            if path == f"repos/{repository}/issues/{issue['number']}":
+                return copy.deepcopy(issue)
         if path.endswith("/actions/runs/123"):
             return copy.deepcopy(self.run)
         if path == "user":
@@ -289,8 +299,9 @@ class API:
             repo = path.removeprefix("repos/").split("/branches/")[0]
             snapshot = next(item for item in self.envelope["payload"]["repositories"] if item["repository"] == repo)
             return {"commit": {"sha": snapshot["release_head"]}}
-        if path.endswith("/issues/26/comments") and method == "POST":
-            comment = {"id": len(self.comments) + 1, "user": {"login": "yizha1"}, **payload}
+        if path.endswith("/comments") and method == "POST":
+            comment = {"id": len(self.comments) + 1, "user": {"login": "yizha1"},
+                       "issue_url": "https://api.github.com/" + path.removesuffix("/comments"), **payload}
             self.comments.append(comment)
             return copy.deepcopy(comment)
         if path == f"repos/{CORE}/releases" and method == "POST":
@@ -424,14 +435,15 @@ class AuthorizationTests(unittest.TestCase):
 
     def test_failure_comment_is_fixed_issue_deduped_and_escaped(self):
         first = controller.failure(self.api, CORE, "qualification", "[bad](x) @evil | `cmd`")
-        second = controller.failure(self.api, CORE, "qualification", "second")
+        second = controller.failure(self.api, CORE, "qualification", "[bad](x) @evil | `cmd`")
         self.assertEqual(first["action"], "notified")
-        self.assertEqual(second["action"], "already-notified")
-        self.assertEqual(len(self.api.comments), 1)
+        self.assertEqual(second, first)
+        self.assertEqual(len(self.api.comments), 3)
         body = self.api.comments[0]["body"]
         self.assertIn("@yizha1", body)
         self.assertIn("actions/runs/123", body)
-        self.assertIn(GO, body)
+        self.assertEqual(first["issue"], 20)
+        self.assertTrue(all("Reason:" not in comment["body"] for comment in self.api.comments[1:]))
         self.assertNotIn("@evil", body)
         self.assertFalse(any(path.endswith("/issues/26") and method == "PATCH" for path, method, _ in self.api.writes))
 
@@ -477,8 +489,9 @@ class DraftLifecycleTests(unittest.TestCase):
         self.assertFalse(any("Qualified draft release review" in issue["body"] for issue in self.api.issues))
         qualified = release.complete(self.api, result)
         self.assertEqual(qualified["status"], "awaiting-publication")
-        self.assertIn("Publish release", self.api.issues[-1]["body"])
-        self.assertIn("untagged-draft-44", self.api.issues[-1]["body"])
+        self.assertEqual(qualified["draft_review_issue"], 20)
+        self.assertIn("Publish release", self.api.comments[-1]["body"])
+        self.assertIn("untagged-draft-44", self.api.comments[-1]["body"])
         self.assertFalse(any(method == "PATCH" and "/releases/" in path for path, method, _ in self.api.writes))
 
     def test_publication_before_qualification_rejects(self):
@@ -515,7 +528,7 @@ class DraftLifecycleTests(unittest.TestCase):
 
     def test_review_body_edit_blocks_public_progress(self):
         qualified = release.complete(self.api, self.stage())
-        issue = next(item for item in self.api.issues if item["number"] == qualified["draft_review_issue"])
+        issue = self.api.scopes[CORE]
         issue["body"] += "modified"
         self.api.remote["draft"] = False
         with self.assertRaises(ValueError):

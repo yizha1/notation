@@ -11,8 +11,9 @@ The approval binds signed plan commit
 `d7a9cd8f0235aa78b2af278596a76a94f1ad38fff034bce1bfcc19800f62e9b3`,
 the unchanged normalized body of [owner review issue](https://github.com/yizha1/notation/issues/26),
 and its unedited owner `/approve` comment. The executor rechecks those records
-before privileged operations. Review-issue comments may report progress or
-failures; editing the approved issue body revokes execution. The owner separately
+before privileged operations. The reviewed presentation-v1 receipt permits only
+the owner's requested issue reorganization, not scope or authority changes.
+Any other body edit revokes execution. The owner separately
 authorized this deployment and execution through qualified drafts only.
 
 ## Deployment and dispatch
@@ -118,9 +119,11 @@ token, never the release token or key. This avoids relying on read-only tokens
 being permitted to access private draft metadata. Credential-bearing asset API
 redirects never forward authorization to the storage host.
 
-Only successful downloaded-draft native checks open the repository's qualified
-draft review issue. The issue includes the recorded draft URL/release ID, actual
-source/backport/metadata commits, asset IDs/hashes/sizes, and evidence.
+Each repository has one human release issue: Core20, Go16, and CLI26.
+Each shows only its own scope; Go links Core, and CLI links both dependencies.
+Only successful downloaded-draft native checks add a qualified-draft comment
+to the existing issue, never another human review thread. The technical cycle
+issue retains full source/backport/metadata, release and asset identity.
 The worker **never publishes**. The owner reviews the draft and uses GitHub
 Publish release without changing tag/assets. A later dispatch requires that same
 release and bytes, then performs real anonymous public-package verification.
@@ -130,9 +133,12 @@ with the first qualified Core draft while Go and CLI remain blocked.
 ## Failure notification and local checks
 
 A failed job stops that chain. Once trusted bootstrap identity exists, the
-failure job posts one deduplicated comment per run/stage to issue26, mentioning
+failure job posts one deduplicated comment per run/stage to the affected
+repository's release issue, mentioning
 `@yizha1` with repository, stage, short reason, run/evidence link, blocked
-consumers, and required owner decision. It never edits the approved issue body.
+consumers, and required owner decision. Consumer issues receive only a concise
+dependency blocker link, not copied error details. Required check/review blockers
+also notify the same repository thread. Routine progress sends no comments.
 The parent monitors and reports failures in chat. Early bootstrap/provenance
 failures may prevent a credentialed comment safely; the parent monitor must report
 those. GitHub inbox/email delivery depends on the owner's notification settings,
@@ -141,7 +147,7 @@ especially because the automation uses the owner's own account.
 ```sh
 cd .github/scripts
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest \
-  test_fork_manual_executor test_fork_draft_download \
+  test_fork_manual_executor test_fork_draft_download test_fork_release_presentation \
   test_worker_bootstrap_release test_monthly_release_checks
 ```
 
@@ -150,3 +156,21 @@ fork-specific suite covers this deliberately different owner protocol and fixed
 deployment namespace. Tests are fixtures, not a live release rehearsal. Hosted
 credential permissions, source qualification, actual asset transfer, and all
 three native operating systems still have to pass during the real run.
+
+## Presentation-only migration
+
+The deployment embeds the exact `presentation-v1.json` receipt and its SHA-256.
+It binds the three fixed issue IDs, old and new byte-exact bodies, the same
+99ae plan metadata, d7a scope digest, and original owner comment6260449311.
+The parent applies only those exact new bodies. Either recorded old or new body
+is accepted during this bounded rollout; arbitrary edits or new dependencies fail.
+The original bodies remain in the receipt's audit data, not in visible issues.
+
+Core's existing unpublished release416979094 and asset IDs655453799/655453836
+retain the same signed source, original bytes/hashes, branch lease, and native
+proof from run39210327124 using shared worker059ed8. A reviewed presentation
+deployment must not rewrite the old run as if it used new code, rebuild assets,
+requalify the draft, or adopt another tag/release. The runtime checks the original
+run's immutable provenance as well as the frozen qualification receipt.
+This migration does not authorize publication or add bug-fix proposals to the
+approved eleven-PR trial.

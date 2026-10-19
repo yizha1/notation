@@ -92,8 +92,10 @@ def approved_plan(api):
             or {item["repository"] for item in payload["repositories"]} != set(REPOSITORIES)):
         raise ValueError("Plan escapes fixed fork trial")
     issue = api.request(f"repos/{HOST}/issues/{ISSUE}")
+    from fork_release_presentation import migrated_approval_body
+    body_matches = hashlib.sha256(issue.get("body", "").strip().encode()).hexdigest() == BODY_HASH
     if (issue.get("user", {}).get("login") != OWNER or issue.get("state") != "open"
-            or "pull_request" in issue or hashlib.sha256(issue.get("body", "").strip().encode()).hexdigest() != BODY_HASH):
+            or "pull_request" in issue or not (body_matches or migrated_approval_body(api, issue))):
         raise ValueError("Owner-approved plan issue changed or closed")
     editor = api.issue_editor(HOST, ISSUE)
     if editor not in {None, OWNER}:
@@ -286,26 +288,10 @@ def failure(api, repository, stage, reason):
     if repository not in REPOSITORIES or not re.fullmatch(r"[a-z][a-z0-9-]{0,50}", stage):
         raise ValueError("Failure notification escapes fixed fork trial")
     invocation(api, repository)
+    approved_plan(api)
+    from fork_release_presentation import notify_failure
     run_id = int(os.environ["GITHUB_RUN_ID"])
-    marker = f"<!-- fork-manual-failure:{CYCLE_ID}:{repository}:{run_id}:{stage} -->"
-    comments = list(api.pages(f"repos/{HOST}/issues/{ISSUE}/comments"))
-    matches = [item for item in comments if marker in (item.get("body") or "")]
-    if matches:
-        if len(matches) != 1 or matches[0].get("user", {}).get("login") != OWNER:
-            raise ValueError("Failure receipt has an untrusted duplicate")
-        return {"action": "already-notified", "comment": matches[0]["id"]}
-    downstream = [repo for repo in REPOSITORIES
-                  if repository.split("/")[1] in release.PROJECTS[repo.split("/")[1]]]
-    body = (f"{marker}\n@yizha1 Fork trial stopped in `{repository}` at `{stage}`.\n\n"
-            f"Reason: {safe_title(reason)}\n\n"
-            f"Logs and retained evidence: https://github.com/{repository}/actions/runs/{run_id}\n\n"
-            f"Blocked consumers: {', '.join(downstream) or 'None; this repository remains blocked'}.\n\n"
-            "Owner decision: inspect the failed gate and approve any scope change separately. "
-            "Automation granted no security waiver, moved no tag, and did not publish a release. "
-            "A fresh resume must pass all gates. "
-            "GitHub inbox/email delivery depends on notification settings; the supervising agent also reports in chat.")
-    comment = api.request(f"repos/{HOST}/issues/{ISSUE}/comments", "POST", {"body": body})
-    return {"action": "notified", "comment": comment["id"]}
+    return notify_failure(api, repository, run_id, stage, reason)
 
 
 def main():

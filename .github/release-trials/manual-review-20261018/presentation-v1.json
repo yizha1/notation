@@ -1,0 +1,150 @@
+{
+  "approval_comment_id": 6260449311,
+  "existing_core_quality": {
+    "assets": [
+      {
+        "id": 655453799,
+        "name": "notation-core-go_1.3.3-manual-review.20261018_checksums.txt",
+        "sha256": "070d6b20a9f138d654d392904eae3740f1d0840805e10143e40f9625a582672e",
+        "size": 126
+      },
+      {
+        "id": 655453836,
+        "name": "notation-core-go_1.3.3-manual-review.20261018_source.tar.gz",
+        "sha256": "fe096e9a9889fea4e9d9cc7804c3974c0c8883bcb2fa93042b312967be426001",
+        "size": 150560
+      }
+    ],
+    "backports": [
+      {
+        "backport_commit": "48f1607596bf5828f9a725bd663e326e0e16026d",
+        "commit": "542a96d4976d510801caba0006b69d325a84dd58",
+        "merged_at": "2026-10-19T06:15:29Z",
+        "number": 15
+      },
+      {
+        "backport_commit": "30bf3980a80aab03b354bad3517ace993e9f42a5",
+        "commit": "30c20151f426d6778ad428721c5b74bde22e54c0",
+        "merged_at": "2026-10-19T06:15:43Z",
+        "number": 16
+      },
+      {
+        "backport_commit": "ec1e00ce161420789e3ce6826a7cd092006f62dd",
+        "commit": "24fee82ba8a4c7d3f2e434b9f3dce615a6ae7f58",
+        "merged_at": "2026-10-19T06:15:55Z",
+        "number": 17
+      }
+    ],
+    "commit": "ec1e00ce161420789e3ce6826a7cd092006f62dd",
+    "controller_plan_id": "d7a9cd8f0235aa78b2af278596a76a94f1ad38fff034bce1bfcc19800f62e9b3",
+    "draft_plan_id": "d7a9cd8f0235aa78b2af278596a76a94f1ad38fff034bce1bfcc19800f62e9b3",
+    "draft_verification": {
+      "artifacts": [
+        "monthly-source-*",
+        "monthly-build-evidence",
+        "monthly-draft-*"
+      ],
+      "evidence": "https://github.com/yizha1/notation-core-go/actions/runs/39210327124",
+      "platforms": [
+        "linux_amd64",
+        "darwin_arm64",
+        "windows_amd64"
+      ],
+      "run_id": 39210327124,
+      "worker_sha": "059ed8e00de14358e42f53872195d2675cb47b2d"
+    },
+    "merged": [
+      {
+        "commit": "542a96d4976d510801caba0006b69d325a84dd58",
+        "merged_at": "2026-10-19T06:15:29Z",
+        "number": 15
+      },
+      {
+        "commit": "30c20151f426d6778ad428721c5b74bde22e54c0",
+        "merged_at": "2026-10-19T06:15:43Z",
+        "number": 16
+      },
+      {
+        "commit": "24fee82ba8a4c7d3f2e434b9f3dce615a6ae7f58",
+        "merged_at": "2026-10-19T06:15:55Z",
+        "number": 17
+      }
+    ],
+    "month": "2026-10",
+    "previous_head": "d98cb3497b8b91aaf002296fe7b0d1508ea8b2ef",
+    "qualification": {
+      "artifacts": [
+        "monthly-source-*",
+        "monthly-build-evidence"
+      ],
+      "commit": "ec1e00ce161420789e3ce6826a7cd092006f62dd",
+      "evidence": "https://github.com/yizha1/notation-core-go/actions/runs/39210327124",
+      "run_id": 39210327124,
+      "worker_sha": "059ed8e00de14358e42f53872195d2675cb47b2d"
+    },
+    "release_backport": {
+      "actor": "yizha1",
+      "base_ref": "monthly-patch-test-release-1.3",
+      "base_sha": "7a53d45b39bab73a7d3be4ee0a8c4cb0cc5b1fed",
+      "head_ref": "monthly-patch/2026-10/d7a9cd8f0235aa78b2af278596a76a94f1ad38fff034bce1bfcc19800f62e9b3/dependencies",
+      "head_sha": "ec1e00ce161420789e3ce6826a7cd092006f62dd",
+      "head_tree": "fe7e2c108d50aa0b56ebab2e6a9d0e02f6014782",
+      "merge_commit_sha": "d98cb3497b8b91aaf002296fe7b0d1508ea8b2ef",
+      "number": 19,
+      "repository": "yizha1/notation-core-go",
+      "tag": "v1.3.3-manual-review.20261018"
+    },
+    "release_id": 416979094,
+    "repository": "yizha1/notation-core-go",
+    "tag": "v1.3.3-manual-review.20261018",
+    "tag_object": "c8bdb3206fc792cb9dd7a553ae63807a76296a44"
+  },
+  "issues": {
+    "yizha1/notation": {
+      "body": "<!-- notation-release-scope:v1:yizha1/notation:2026-10 -->\n# October 2026 patch release: notation\n\nCurrent: `v1.3.4-monthly-test.202610`  \nProposed: `v1.3.5-manual-review.20261018`\n\n## Changes\n\nThe approved scope merges these Dependabot PRs, adopts the planned library releases, and cuts a patch release:\n\n- [#25](https://github.com/yizha1/notation/pull/25): pflag 1.0.9 to 1.0.10, x/term 0.46.0 to 0.47.0, ORAS 2.6.2 to 2.6.3, E2E Ginkgo 2.33.0 to 2.33.1, Gomega 1.40.0 to 1.44.0, and transitive dependency updates.\n- [#22](https://github.com/yizha1/notation/pull/22): codecov-action 5.4.2 to 7.1.1.\n- [#21](https://github.com/yizha1/notation/pull/21): stale 9.1.0 to 11.0.0.\n- [#20](https://github.com/yizha1/notation/pull/20): checkout 4.2.2 to 7.0.1.\n- [#19](https://github.com/yizha1/notation/pull/19): add-to-project 1.0.2 to 2.0.0.\n- [#18](https://github.com/yizha1/notation/pull/18): codeql-action 4.38.2 to 4.38.3.\n\nDependencies: [yizha1/notation-core-go#20](https://github.com/yizha1/notation-core-go/issues/20) and [yizha1/notation-go#16](https://github.com/yizha1/notation-go/issues/16).\n\n## Overall status\n\nThe [scope is approved](https://github.com/yizha1/notation/issues/26#issuecomment-6260449311). Core's qualified draft awaits review and publication. Go and CLI are blocked on their linked dependencies; no Go or CLI draft exists.\n\nEach repository's issue holds its own changes, errors, blockers, and draft-ready notification. Maintainers publish each release manually, in dependency order.\n",
+      "body_sha256": "0b9c7a5dc161962ad48f8d67709251ccaa51d3ee8510d97bd95ff4e1d1544027",
+      "number": 26,
+      "previous_body_sha256": "ac618b073e92e82a1ad3f66fadbe91b5022a2d38ab9b72fc718fd6e9af6baf44"
+    },
+    "yizha1/notation-core-go": {
+      "body": "<!-- notation-release-scope:v1:yizha1/notation-core-go:2026-10 -->\n# October 2026 patch release: notation-core-go\n\nCurrent: `v1.3.2-monthly-test.202610`  \nProposed: `v1.3.3-manual-review.20261018`\n\n## Changes\n\nThe approved scope merges these Dependabot PRs and cuts a patch release:\n\n- [#17](https://github.com/yizha1/notation-core-go/pull/17): CBOR 2.9.4 to 2.9.6 and x/crypto 0.57.0 to 0.58.0.\n- [#16](https://github.com/yizha1/notation-core-go/pull/16): upload-artifact 7.0.1 to 7.0.2.\n- [#15](https://github.com/yizha1/notation-core-go/pull/15): checkout 4 to 7.\n\nDependencies: none.\n\n## Review\n\nThe [qualified draft](https://github.com/yizha1/notation-core-go/releases/tag/untagged-ef801bfb5ab53983fd69) is ready and remains unpublished. Source, scan, package, and downloaded-asset checks passed on Linux, macOS, and Windows. [Qualification evidence](https://github.com/yizha1/notation-core-go/actions/runs/39210327124).\n\nReview the draft and publish it manually when satisfied, without changing its tag, commit, or assets. The fork prerelease tag is already public. Consumers remain blocked until publication and public verification.\n",
+      "body_sha256": "7e6c6430153822ea54ddbbadad62811f6dc265fcf0513bf72cce7705121379e3",
+      "number": 20,
+      "previous_body_sha256": "4abb73368d5a2d520f940d5431bb69102443dd13ca6023ef8f3297d2be82ef38"
+    },
+    "yizha1/notation-go": {
+      "body": "<!-- notation-release-scope:v1:yizha1/notation-go:2026-10 -->\n# October 2026 patch release: notation-go\n\nCurrent: `v1.3.4-monthly-test.202610`  \nProposed: `v1.3.5-manual-review.20261018`\n\n## Changes\n\nThe approved scope merges these Dependabot PRs, adopts the planned Core release, and cuts a patch release:\n\n- [#15](https://github.com/yizha1/notation-go/pull/15): LDAP 3.4.14 to 3.4.15, x/crypto 0.57.0 to 0.58.0, x/mod 0.41.0 to 0.42.0, ORAS 2.6.2 to 2.6.3, and transitive dependency updates.\n- [#13](https://github.com/yizha1/notation-go/pull/13): upload-artifact 7.0.1 to 7.0.2.\n\nDependency: [yizha1/notation-core-go#20](https://github.com/yizha1/notation-core-go/issues/20).\n\n## Status\n\nGo is blocked on Core publication and public verification. No Go draft exists. This issue will notify maintainers when its qualified draft is ready for review; publication remains manual.\n",
+      "body_sha256": "5d6bb598455ea5fb13a268a8806bef96c1df33bc5c73769b0a36a2b550581b68",
+      "number": 16,
+      "previous_body_sha256": "f664919a3d9f93d1ceb1f45042854bd7c12c4503ba5122795879de26487f3c2e"
+    }
+  },
+  "kind": "presentation-only-owner-directed",
+  "legacy_issue_bodies": {
+    "yizha1/notation": "# October 2026 patch-release trial\n\nThis plan covers the three `yizha1` forks.\n\n## notation-core-go\n\nCurrent: `v1.3.2-monthly-test.202610`  \nProposed: `v1.3.3-manual-review.20261018`\n\n- [CBOR: 2.9.4 to 2.9.6; x/crypto: 0.57.0 to 0.58.0](https://github.com/yizha1/notation-core-go/pull/17).\n- [actions/upload-artifact: 7.0.1 to 7.0.2](https://github.com/yizha1/notation-core-go/pull/16).\n- [actions/checkout: 4 to 7](https://github.com/yizha1/notation-core-go/pull/15).\n\n## notation-go\n\nCurrent: `v1.3.4-monthly-test.202610`  \nProposed: `v1.3.5-manual-review.20261018`\n\n- [LDAP: 3.4.14 to 3.4.15; x/crypto: 0.57.0 to 0.58.0; x/mod: 0.41.0 to 0.42.0; ORAS: 2.6.2 to 2.6.3](https://github.com/yizha1/notation-go/pull/15), plus transitive dependency updates.\n- [actions/upload-artifact: 7.0.1 to 7.0.2](https://github.com/yizha1/notation-go/pull/13).\n- Adopt the proposed Core release above.\n\n## notation CLI\n\nCurrent: `v1.3.4-monthly-test.202610`  \nProposed: `v1.3.5-manual-review.20261018`\n\n- [pflag: 1.0.9 to 1.0.10; x/term: 0.46.0 to 0.47.0; ORAS: 2.6.2 to 2.6.3](https://github.com/yizha1/notation/pull/25).\n- [Test dependencies: Ginkgo 2.33.0 to 2.33.1; Gomega 1.40.0 to 1.44.0](https://github.com/yizha1/notation/pull/25), plus transitive dependency updates.\n- [codecov/codecov-action: 5.4.2 to 7.1.1](https://github.com/yizha1/notation/pull/22).\n- [actions/stale: 9.1.0 to 11.0.0](https://github.com/yizha1/notation/pull/21).\n- [actions/checkout: 4.2.2 to 7.0.1](https://github.com/yizha1/notation/pull/20).\n- [actions/add-to-project: 1.0.2 to 2.0.0](https://github.com/yizha1/notation/pull/19).\n- [github/codeql-action/init: 4.38.2 to 4.38.3](https://github.com/yizha1/notation/pull/18).\n- Adopt the proposed Core and Go releases above.\n\n**Status:** awaiting scope approval. The stale-action PR has a failing check. Fork execution setup is still pending; nothing has been released.\n\nTo approve this scope, comment `/approve` on this issue.\n\n<details>\n<summary>Full plan</summary>\n\n[Full pinned plan and commits](https://github.com/yizha1/notation/blob/monthly-plan-review-manual-20261018/.github/release-trials/manual-review-20261018/plan.json).\n\nApproval applies to the current plan. If the scope changes, fresh approval is required. Failed checks and unreviewed deployment remain blocked. Draft releases require your review and manual publication.\n\n</details>\n",
+    "yizha1/notation-core-go": "<!-- monthly-release-review:yizha1/notation-core-go:2026-10:v1.3.3-manual-review.20261018 -->\n# Qualified draft release review\n\nReview [v1.3.3-manual-review.20261018 draft](https://github.com/yizha1/notation-core-go/releases/tag/untagged-ef801bfb5ab53983fd69) (release ID 416979094). Source, scan, packaged-asset, and downloaded-draft native checks passed for the exact candidate and recorded bytes below.\n\nPlan: https://github.com/yizha1/notation/issues/26\n\n**Maintainer action:** inspect the draft release, all assets, hashes, and retained evidence. In GitHub Releases, open this exact draft, choose Edit, and choose Publish release without changing its tag, commit, assets, or fork prerelease identity. Do not publish if any check or evidence is missing. Closing this issue or commenting does not publish or authorize the bot to publish. Only a maintainer publishes in this phase. Automation will verify the same release ID and bytes anonymously after publication before completing the cycle or releasing consumers.\n\nThe signed annotated tag is already public. A draft does not hide or revoke the tag. Do not move or recreate it. Publication automation is not implemented.\n\n## Actual release commits\n\n| Change kind | PR | Exact commit |\n|---|---|---|\n| Dependabot source | [#15](https://github.com/yizha1/notation-core-go/pull/15) Dependency update | `542a96d4976d510801caba0006b69d325a84dd58` |\n| Signed dependency backport of PR #15 | Stable candidate source change | `48f1607596bf5828f9a725bd663e326e0e16026d` |\n| Dependabot source | [#16](https://github.com/yizha1/notation-core-go/pull/16) Dependency update | `30c20151f426d6778ad428721c5b74bde22e54c0` |\n| Signed dependency backport of PR #16 | Stable candidate source change | `30bf3980a80aab03b354bad3517ace993e9f42a5` |\n| Dependabot source | [#17](https://github.com/yizha1/notation-core-go/pull/17) Dependency update | `24fee82ba8a4c7d3f2e434b9f3dce615a6ae7f58` |\n| Signed dependency backport of PR #17 | Stable candidate source change | `ec1e00ce161420789e3ce6826a7cd092006f62dd` |\n| Qualified stable dependency candidate/backport | Ordinary reviewed release PR | `ec1e00ce161420789e3ce6826a7cd092006f62dd` |\n| Signed release HEAD (Core dependency candidate) | Repository release governance | `ec1e00ce161420789e3ce6826a7cd092006f62dd` |\n| Normal stable-branch merge tip | Preserved branch lease | `d98cb3497b8b91aaf002296fe7b0d1508ea8b2ef` |\n\n```json\n{\n  \"repository\": \"yizha1/notation-core-go\",\n  \"month\": \"2026-10\",\n  \"tag\": \"v1.3.3-manual-review.20261018\",\n  \"commit\": \"ec1e00ce161420789e3ce6826a7cd092006f62dd\",\n  \"release_id\": 416979094,\n  \"assets\": [\n    {\n      \"name\": \"notation-core-go_1.3.3-manual-review.20261018_checksums.txt\",\n      \"sha256\": \"070d6b20a9f138d654d392904eae3740f1d0840805e10143e40f9625a582672e\",\n      \"size\": 126,\n      \"id\": 655453799\n    },\n    {\n      \"name\": \"notation-core-go_1.3.3-manual-review.20261018_source.tar.gz\",\n      \"sha256\": \"fe096e9a9889fea4e9d9cc7804c3974c0c8883bcb2fa93042b312967be426001\",\n      \"size\": 150560,\n      \"id\": 655453836\n    }\n  ],\n  \"draft_verification\": {\n    \"run_id\": 39210327124,\n    \"worker_sha\": \"059ed8e00de14358e42f53872195d2675cb47b2d\",\n    \"platforms\": [\n      \"linux_amd64\",\n      \"darwin_arm64\",\n      \"windows_amd64\"\n    ],\n    \"evidence\": \"https://github.com/yizha1/notation-core-go/actions/runs/39210327124\",\n    \"artifacts\": [\n      \"monthly-source-*\",\n      \"monthly-build-evidence\",\n      \"monthly-draft-*\"\n    ]\n  },\n  \"controller_issue\": 26,\n  \"draft_html_url\": \"https://github.com/yizha1/notation-core-go/releases/tag/untagged-ef801bfb5ab53983fd69\",\n  \"qualification\": {\n    \"run_id\": 39210327124,\n    \"worker_sha\": \"059ed8e00de14358e42f53872195d2675cb47b2d\",\n    \"commit\": \"ec1e00ce161420789e3ce6826a7cd092006f62dd\",\n    \"evidence\": \"https://github.com/yizha1/notation-core-go/actions/runs/39210327124\",\n    \"artifacts\": [\n      \"monthly-source-*\",\n      \"monthly-build-evidence\"\n    ]\n  },\n  \"controller_plan_id\": \"d7a9cd8f0235aa78b2af278596a76a94f1ad38fff034bce1bfcc19800f62e9b3\"\n}\n```\n",
+    "yizha1/notation-go": "# October 2026 patch release: notation-go\n\nCurrent: `v1.3.4-monthly-test.202610`  \nProposed: `v1.3.5-manual-review.20261018`\n\n## Scope\n\n- Merge the qualifying Dependabot PRs below and cut a patch release.\n- [LDAP 3.4.14 to 3.4.15; x/crypto 0.57.0 to 0.58.0; x/mod 0.41.0 to 0.42.0; ORAS 2.6.2 to 2.6.3](https://github.com/yizha1/notation-go/pull/15), plus transitive dependency updates.\n- [actions/upload-artifact 7.0.1 to 7.0.2](https://github.com/yizha1/notation-go/pull/13).\n\n## Dependencies\n\n- [Core release issue: yizha1/notation-core-go#20](https://github.com/yizha1/notation-core-go/issues/20).\n\n## Status\n\nWaiting for the Core dependency to be published and verified. No Go draft has been prepared.\n\nThe overall release plan was approved in [yizha1/notation#26](https://github.com/yizha1/notation/issues/26). This issue tracks only Go scope, errors or blockers, and notification when its draft is ready for maintainer review. Publication remains manual."
+  },
+  "plan_metadata_commit": "99ae7773ce6e85f2858c39f4b5727fe149c4ef60",
+  "plan_sha256": "d7a9cd8f0235aa78b2af278596a76a94f1ad38fff034bce1bfcc19800f62e9b3",
+  "qualification_run": {
+    "conclusion": "success",
+    "event": "workflow_dispatch",
+    "head_branch": "monthly-manual-executor-20261018",
+    "head_sha": "5c1fb16d3b6601432564994b7e872d5372f513b9",
+    "id": 39210327124,
+    "referenced_workflows": [
+      {
+        "path": "yizha1/notation/.github/workflows/monthly-patch-worker.yml@059ed8e00de14358e42f53872195d2675cb47b2d",
+        "sha": "059ed8e00de14358e42f53872195d2675cb47b2d"
+      }
+    ],
+    "status": "completed"
+  },
+  "routes": {
+    "yizha1/notation": 26,
+    "yizha1/notation-core-go": 20,
+    "yizha1/notation-go": 16
+  },
+  "schema": 1
+}

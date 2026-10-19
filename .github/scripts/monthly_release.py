@@ -548,6 +548,11 @@ def draft_review_body(plan):
 
 
 def check_draft_review(api, plan):
+    from fork_release_presentation import check_existing_quality, check_ready_comment
+    if plan.get("draft_review_comment"):
+        return check_ready_comment(api, plan)
+    if plan.get("release_id") == 416979094 and plan.get("repository") == "yizha1/notation-core-go":
+        return check_existing_quality(api, plan)
     number = plan.get("draft_review_issue")
     if type(number) is not int or number <= 0:
         raise ValueError("Missing qualified draft review issue")
@@ -1108,23 +1113,11 @@ def complete(api, plan):
                 "artifacts": ["monthly-source-*", "monthly-build-evidence", "monthly-draft-*"],
             }
             cycle.save(plan)
-        body = draft_review_body(plan)
-        marker = body.split("\n", 1)[0]
-        reviews = [issue for issue in api.pages(f"repos/{plan['repository']}/issues?state=all")
-                   if marker in (issue.get("body") or "")]
-        if len(reviews) > 1:
-            raise ValueError("Duplicate draft review issues require reconciliation")
-        if reviews:
-            issue = reviews[0]
-            plan["draft_review_issue"] = issue["number"]
-            check_draft_review(api, plan)
-        else:
-            issue = api.request(f"repos/{plan['repository']}/issues", "POST", {
-                "title": f"Review qualified draft: {plan['tag']} ({plan['month']})",
-                "body": body, "state": "open",
-            })
-            plan["draft_review_issue"] = issue["number"]
-            check_draft_review(api, plan)
+        from fork_release_presentation import ready_comment
+        issue, comment = ready_comment(api, plan, draft_review_body(plan))
+        plan.update(draft_review_issue=issue["number"], draft_review_comment=comment["id"],
+                    draft_review_body=comment["body"])
+        check_draft_review(api, plan)
         plan.update(status="awaiting-publication", reason="Qualified draft awaits maintainer Publish release action")
         cycle.save(plan)
         return {**plan, "action": "waiting"}
@@ -1191,6 +1184,10 @@ def main():
                 result = publish(api, plan, args.directory)
             else:
                 result = complete(api, plan)
+        if (args.command == "prepare" and result.get("action") == "waiting"
+                and result.get("status") in {"waiting", "voting"} and result.get("reason")):
+            from notation_release_controller import failure
+            failure(api, args.repository, "blocked-" + result["status"], result["reason"])
         (args.output / "plan.json").write_text(json.dumps(result, indent=2) + "\n")
         print(json.dumps(result, indent=2))
         if os.environ.get("GITHUB_OUTPUT"):

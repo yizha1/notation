@@ -183,6 +183,7 @@ jobs:
           MONTHLY_PATCH_COORDINATOR_REQUIRED: 'false'
         run: |
           python3 -m unittest discover -s . -p 'test_fork_manual_executor.py'
+          python3 -m unittest discover -s . -p 'test_fork_release_presentation.py'
           python3 -m unittest discover -s . -p 'test_fork_draft_download.py'
           python3 -m unittest discover -s . -p 'test_worker_bootstrap_release.py'
           python3 -m unittest discover -s . -p 'test_monthly_release_checks.py'
